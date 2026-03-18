@@ -1,11 +1,15 @@
 """
 Inference pipeline for the Word Splitter.
 
+Approach: The input spaceless text is expanded to have spaces between every
+character. The MLP predicts which spaces to REMOVE. Perplexity verification
+confirms removals one at a time (greedy best-first).
+
 Iterative loop:
-  1. MLP predicts P(space) at each character position
-  2. Candidate selection: positions where P(space) > threshold
-  3. Minerva perplexity verification: confirm only spaces that reduce perplexity
-  4. Convergence: repeat until no new spaces are confirmed
+  1. MLP predicts P(remove space) at each character position
+  2. Candidate selection: positions where P(remove) > threshold
+  3. Minerva perplexity verification: pick the best removal
+  4. Convergence: repeat until no more spaces are removed
 """
 
 from pathlib import Path
@@ -54,13 +58,19 @@ def mlp_predict(
     device: torch.device,
 ) -> list[float]:
     """
-    Run MLP inference on a text string.
+    Run MLP inference on a spaced-out text string.
+
+    The text is first expanded to "c i a o ..." format, then tokenized
+    and fed through Minerva + MLP.
 
     Returns:
-        List of P(space) probabilities, one per character.
+        List of P(remove space) probabilities, one per character.
     """
+    # Expand to spaced format
+    spaced = " ".join(list(text.replace(" ", "")))
+
     # Tokenize and get char→token map
-    input_ids, char_to_token = build_char_to_token_map(text, tokenizer)
+    input_ids, char_to_token = build_char_to_token_map(spaced, tokenizer)
 
     input_ids_t = torch.tensor([input_ids], dtype=torch.long, device=device)
     attention_mask = torch.ones_like(input_ids_t)
@@ -77,21 +87,41 @@ def mlp_predict(
     return probs.squeeze(0).cpu().tolist()
 
 
-def select_candidates(probs: list[float], threshold: float = 0.8) -> list[int]:
+def select_candidates(
+    probs: list[float],
+    current_text: str,
+    threshold: float = 0.5,
+) -> list[int]:
     """
-    Select candidate positions where P(space) > threshold.
+    Select candidate space positions to REMOVE.
+
+    Maps MLP character-level predictions back to space positions
+    in the current text.
 
     Args:
-        probs: per-character space probabilities
+        probs: per-character P(remove space) from the MLP
+        current_text: the current text with some spaces remaining
         threshold: minimum probability to consider
 
     Returns:
-        List of character indices where spaces should be inserted (after that char).
+        List of indices into current_text where spaces could be removed.
     """
     candidates = []
-    for i, p in enumerate(probs):
-        if p > threshold and i < len(probs) - 1:  # no space at very end
-            candidates.append(i)
+
+    # Map original char indices to space positions in current_text
+    # current_text has spaces; we need to find which spaces correspond
+    # to which original character boundaries
+    char_idx = 0
+    for i, ch in enumerate(current_text):
+        if ch == " ":
+            # This space sits between original char_idx-1 and char_idx
+            # The MLP probability at char_idx-1 tells us if this space should be removed
+            if char_idx > 0 and char_idx - 1 < len(probs):
+                if probs[char_idx - 1] > threshold:
+                    candidates.append(i)
+        else:
+            char_idx += 1
+
     return candidates
 
 
@@ -104,69 +134,52 @@ def verify_with_perplexity(
     device: torch.device,
 ) -> list[int]:
     """
-    Verify candidate space positions using perplexity.
+    Verify candidate space REMOVALS using perplexity.
 
     Evaluates all candidates and picks only the single best one —
-    the position whose space insertion yields the largest perplexity drop.
-    The drop must be significant (≥10%) to be accepted.
+    the removal that yields the largest perplexity drop.
 
     Args:
-        text: current text (may already have some spaces)
-        candidates: proposed space positions (indices in the SPACELESS version)
+        text: current text with spaces
+        candidates: indices of spaces that could be removed
         minerva_model: Minerva model for perplexity computation
         tokenizer: Minerva tokenizer
-        already_confirmed: set of positions already confirmed (skip these)
+        already_confirmed: set of positions already removed (skip)
         device: computation device
 
     Returns:
-        List with at most one confirmed position (the best candidate).
+        List with at most one confirmed space index to remove.
     """
     pp_baseline = compute_perplexity(minerva_model, tokenizer, text, device)
+
     best_pos = None
     best_pp = pp_baseline
 
-    #text = " ".join(text)
-            
+    pp = []
 
     for pos in candidates:
         if pos in already_confirmed:
             continue
 
-        # Build text with space inserted at this position
-        #text_with_space = text[:pos] + " " + text[pos:]
+        # Build text with this space removed
+        text_without_space = text[:pos] + text[pos + 1:]
+        pp_without = compute_perplexity(minerva_model, tokenizer, text_without_space, device)
 
-        text_without_space = text[:pos] + text[pos+1:]
-        
-        
-        pp_with = compute_perplexity(minerva_model, tokenizer, text_without_space, device)
-        if pp_with < best_pp:
-            best_pp = pp_with
+        if pp_without < best_pp *1.2:
+            pp.append(pos)
+            best_pp = pp_without
             best_pos = pos
-            print(text_without_space)
 
-    # Accept only if the best candidate significantly reduces perplexity
-    if best_pos is not None and best_pp < pp_baseline*1:
-        return [best_pos]
+    # Accept only if the best removal significantly reduces perplexity
+    if best_pos is not None and best_pp < pp_baseline *1.2:
+        return pp
 
     return []
 
 
-def insert_spaces(text: str, positions: list[int]) -> str:
-    """
-    Insert spaces into text at the given positions.
-
-    Positions are character indices in the original spaceless text;
-    a space is inserted AFTER each position.
-    """
-    if not positions:
-        return text
-
-    # Sort positions in reverse so insertions don't shift indices
-    sorted_pos = sorted(positions, reverse=True)
-    chars = list(text)
-    for pos in sorted_pos:
-        chars.insert(pos + 1, " ")
-    return "".join(chars)
+def remove_space_at(text: str, pos: int) -> str:
+    """Remove the space at position `pos` in the text."""
+    return text[:pos] + text[pos + 1:]
 
 
 def split_text(
@@ -175,12 +188,15 @@ def split_text(
     minerva_model: AutoModelForCausalLM,
     tokenizer: AutoTokenizer,
     device: torch.device | None = None,
-    threshold: float = 0.8,
-    max_iterations: int = 10,
+    threshold: float = 0.5,
+    max_iterations: int = 50,
     verbose: bool = True,
 ) -> str:
     """
     Full iterative word splitting pipeline.
+
+    Starting from text with spaces between every character,
+    iteratively remove spaces that the MLP + perplexity agree on.
 
     Args:
         text: input spaceless text
@@ -188,37 +204,37 @@ def split_text(
         minerva_model: Minerva model
         tokenizer: Minerva tokenizer
         device: computation device
-        threshold: P(space) threshold for candidate selection
+        threshold: P(remove) threshold for candidate selection
         max_iterations: maximum number of iterations
         verbose: print progress information
 
     Returns:
-        Text with recovered word boundaries (spaces inserted).
+        Text with recovered word boundaries.
     """
     if device is None:
         device = get_device()
 
-    # Remove any existing spaces from input
+    # Remove any existing spaces and create fully-spaced version
     spaceless = text.replace(" ", "")
-    current_text = spaceless
-    all_confirmed: set[int] = set()
+    current_text = " ".join(list(spaceless))
+    removed_positions: set[int] = set()
 
     if verbose:
         print(f"Input: '{spaceless}'")
+        print(f"Spaced: '{current_text}'")
         print(f"Threshold: {threshold}")
-        print(f"{'─'*60}")
+        print(f"{'─' * 60}")
 
     for iteration in range(1, max_iterations + 1):
         if verbose:
             print(f"\nIteration {iteration}:")
 
-        # Step 1: MLP prediction on SPACELESS text
-        # We always run MLP on the original spaceless text
+        # Step 1: MLP prediction on the spaceless text
         probs = mlp_predict(spaceless, mlp, minerva_model, tokenizer, device)
 
-        # Step 2: Candidate selection
-        candidates = select_candidates(probs, threshold)
-        new_candidates = [c for c in candidates if c not in all_confirmed]
+        # Step 2: Candidate selection (spaces in current_text to remove)
+        candidates = select_candidates(probs, current_text, threshold)
+        new_candidates = [c for c in candidates if c not in removed_positions]
 
         if verbose:
             print(f"  MLP candidates: {len(candidates)} total, {len(new_candidates)} new")
@@ -228,16 +244,13 @@ def split_text(
                 print("  → No new candidates. Converged!")
             break
 
-        # Step 3: Perplexity verification
-        # Build the current version of text with confirmed spaces
-        current_text = insert_spaces(spaceless, sorted(all_confirmed))
-
+        # Step 3: Perplexity verification — pick best single removal
         confirmed = verify_with_perplexity(
             text=current_text,
             candidates=new_candidates,
             minerva_model=minerva_model,
             tokenizer=tokenizer,
-            already_confirmed=all_confirmed,
+            already_confirmed=removed_positions,
             device=device,
         )
 
@@ -246,20 +259,21 @@ def split_text(
 
         if not confirmed:
             if verbose:
-                print("  → No new spaces confirmed. Converged!")
+                print("  → No removals confirmed. Converged!")
             break
 
-        all_confirmed.update(confirmed)
-        current_text = insert_spaces(spaceless, sorted(all_confirmed))
+        # Apply the confirmed removal
+        for pos in confirmed:
+            current_text = remove_space_at(current_text, pos - len(removed_positions))
+
+            # Track removed positions (adjust for shifted indices)
+            removed_positions.add(pos)
 
         if verbose:
             print(f"  Current: '{current_text}'")
 
-    # Final result
-    result = insert_spaces(spaceless, sorted(all_confirmed))
-
     if verbose:
-        print(f"\n{'─'*60}")
-        print(f"Result: '{result}'")
+        print(f"\n{'─' * 60}")
+        print(f"Result: '{current_text}'")
 
-    return result
+    return current_text

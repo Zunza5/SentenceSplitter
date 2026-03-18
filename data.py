@@ -3,6 +3,9 @@ Data pipeline for the Word Splitter.
 
 Loads Italian UD treebanks, creates character-level labels,
 and builds PyTorch datasets for training.
+
+Approach: The input text has spaces between every character.
+The MLP predicts which spaces to REMOVE (label=1 means "remove space after this char").
 """
 
 import os
@@ -52,45 +55,63 @@ def parse_conllu(path: Path) -> list[list[str]]:
     return sentences
 
 
-def make_char_labels(words: list[str]) -> tuple[str, list[int]]:
+def make_char_labels(words: list[str]) -> tuple[str, str, list[int]]:
     """
     Given a list of words, create:
       - spaceless: the concatenated string without spaces
+      - spaced: every character separated by a space ("c i a o c o m e ...")
       - labels: binary list of length len(spaceless),
-                labels[i] = 1 if a space should be inserted AFTER character i
+                labels[i] = 1 if the space after char i should be REMOVED
+                             (i.e. this char and the next are in the same word)
+                labels[i] = 0 if the space after char i is a real word boundary
+                             (keep the space)
+
+    The last character has no space after it, so it gets label -1 (ignore).
 
     Example:
         words = ["ciao", "come", "stai"]
         spaceless = "ciaocomesstai"
-        labels    = [0,0,0,1, 0,0,0,1, 0,0,0,0]
-                             ^space    ^space    ^end (no space)
+        spaced    = "c i a o c o m e s t a i"
+        labels    = [1,1,1,0, 1,1,1,0, 1,1,1,-1]
+                         ^keep       ^keep      ^end (ignore)
     """
     spaceless = "".join(words)
-    labels = [0] * len(spaceless)
+    spaced = " ".join(list(spaceless))
 
+    # Default: all spaces should be removed (same word → 1)
+    labels = [1] * len(spaceless)
+
+    # Mark real word boundaries as 0 (keep the space)
     pos = 0
-    for word in words[:-1]:  # no space after the last word
+    for word in words[:-1]:
         pos += len(word)
-        labels[pos - 1] = 1  # space AFTER last char of this word
+        labels[pos - 1] = 0  # space AFTER last char of this word is a real boundary
 
-    return spaceless, labels
+    # Last character: no space after it, ignore
+    labels[-1] = -1
+
+    return spaceless, spaced, labels
 
 
 def build_char_to_token_map(
-    spaceless: str,
+    spaced: str,
     tokenizer: AutoTokenizer,
 ) -> tuple[list[int], list[int]]:
     """
-    Tokenize the spaceless string and build a mapping from
+    Tokenize the SPACED string and build a mapping from
     character position → token index.
+
+    The spaced string has the format "c i a o ..." where each original
+    character is separated by spaces. We map each original character
+    to the token that covers it.
 
     Returns:
         input_ids: token IDs from the tokenizer
-        char_to_token: list of length len(spaceless),
+        char_to_token: list of length num_original_chars,
                        char_to_token[i] = index into input_ids
     """
     encoding = tokenizer(
-        spaceless,
+        spaced,
         return_tensors="pt",
         add_special_tokens=True,
         return_offsets_mapping=True,
@@ -98,12 +119,18 @@ def build_char_to_token_map(
     input_ids = encoding["input_ids"].squeeze(0).tolist()
     offsets = encoding["offset_mapping"].squeeze(0).tolist()
 
-    # Build char → token mapping
-    char_to_token = [0] * len(spaceless)
+    # In the spaced string, original char i is at position i*2
+    # (e.g., "c i a o" → c=0, i=2, a=4, o=6)
+    num_chars = (len(spaced) + 1) // 2  # number of original characters
+    char_to_token = [0] * num_chars
+
     for tok_idx, (start, end) in enumerate(offsets):
-        for char_idx in range(start, end):
-            if char_idx < len(spaceless):
-                char_to_token[char_idx] = tok_idx
+        for spaced_pos in range(start, end):
+            # Only map even positions (the actual characters, not the spaces)
+            if spaced_pos % 2 == 0:
+                char_idx = spaced_pos // 2
+                if char_idx < num_chars:
+                    char_to_token[char_idx] = tok_idx
 
     return input_ids, char_to_token
 
@@ -113,10 +140,11 @@ class WordSplitDataset(Dataset):
     PyTorch Dataset for the word splitting task.
 
     Each item contains:
-        - input_ids: tokenized spaceless text (LongTensor)
+        - input_ids: tokenized spaced text (LongTensor)
         - char_labels: binary labels per character (FloatTensor)
         - char_to_token: mapping from char pos to token idx (LongTensor)
         - spaceless: the original spaceless string
+        - spaced: the spaced-out string
     """
 
     def __init__(
@@ -140,11 +168,11 @@ class WordSplitDataset(Dataset):
         # Pre-process all samples
         self.samples = []
         for words in self.sentences:
-            spaceless, labels = make_char_labels(words)
+            spaceless, spaced, labels = make_char_labels(words)
             if len(spaceless) == 0 or len(spaceless) > max_chars:
                 continue
             input_ids, char_to_token = build_char_to_token_map(
-                spaceless, self.tokenizer
+                spaced, self.tokenizer
             )
             self.samples.append(
                 {
@@ -152,6 +180,7 @@ class WordSplitDataset(Dataset):
                     "char_labels": torch.tensor(labels, dtype=torch.float32),
                     "char_to_token": torch.tensor(char_to_token, dtype=torch.long),
                     "spaceless": spaceless,
+                    "spaced": spaced,
                 }
             )
 

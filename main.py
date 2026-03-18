@@ -45,11 +45,21 @@ def cmd_split(args):
 
     if args.no_verify:
         # Fast mode: MLP only, no perplexity verification
-        from inference import mlp_predict, select_candidates, insert_spaces
+        from inference import mlp_predict, select_candidates
 
-        probs = mlp_predict(text, mlp, minerva_model, tokenizer, device)
-        candidates = select_candidates(probs, threshold)
-        result = insert_spaces(text, candidates)
+        spaceless = text.replace(" ", "")
+        spaced = " ".join(list(spaceless))
+        probs = mlp_predict(spaceless, mlp, minerva_model, tokenizer, device)
+
+        # Remove spaces where P(remove) > threshold
+        result_chars = list(spaceless)
+        result = []
+        for i, ch in enumerate(result_chars):
+            result.append(ch)
+            if i < len(probs) - 1 and probs[i] <= threshold:
+                result.append(" ")
+        result = "".join(result)
+
         print(f"\n{'─'*60}")
         print(f"Input:  '{text}'")
         print(f"Output: '{result}'")
