@@ -11,12 +11,13 @@ Handles:
 
 import os
 from pathlib import Path
+from typing import Any, Tuple, Optional
 
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-MODEL_NAME = "sapienzanlp/Minerva-1B-base-v1.0"
+MODEL_NAME = "mlx-community/Qwen3.5-2B-MLX-8bit"
 CACHE_DIR = Path(__file__).parent / "embedding_cache"
 
 
@@ -29,55 +30,76 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 
-def load_minerva(device: torch.device | None = None):
+def load_language_model(backend: str = "transformers", device: torch.device | None = None) -> Tuple[Any, Any]:
     """
-    Load the Minerva model and tokenizer.
-
-    Returns:
-        model: the Minerva causal LM in eval mode
-        tokenizer: the corresponding tokenizer
+    Load the Language Model and tokenizer dynamically handling transformers or mlx.
     """
-    if device is None:
-        device = get_device()
-
-    print(f"Loading Minerva model on {device}...")
+    print(f"Loading {MODEL_NAME} with backend '{backend}'...")
+    
+    # We always use the Hugging Face tokenizer to maintain full API compatibility 
+    # (like return_offsets_mapping and call semantics).
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        torch_dtype=torch.bfloat16,
-        device_map=None,
-    )
-    model = model.to(device)
-    model.eval()
-    print("  → Model loaded.")
-    return model, tokenizer
+    
+    if backend == "mlx":
+        import mlx_lm
+        model, _ = mlx_lm.load(MODEL_NAME)
+        print("  → MLX Model loaded.")
+        return model, tokenizer
+    else:
+        if device is None:
+            device = get_device()
+        
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_NAME,
+            device_map="auto"
+        )
+        model.eval()
+        print("  → Transformers Model loaded.")
+        return model, tokenizer
 
 
 @torch.no_grad()
 def extract_token_embeddings(
-    model: AutoModelForCausalLM,
+    model: Any,
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
+    backend: str = "transformers"
 ) -> torch.Tensor:
     """
-    Extract last-layer hidden state embeddings.
-
-    Args:
-        model: Minerva model
-        input_ids: (batch, seq_len) token IDs
-        attention_mask: (batch, seq_len) attention mask
-
-    Returns:
-        (batch, seq_len, hidden_dim) last hidden state in float32
+    Extract last-layer hidden state embeddings safely mapped between backends.
     """
-    outputs = model(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        output_hidden_states=True,
-    )
-    # Last hidden state
-    hidden = outputs.hidden_states[-1]  # (batch, seq_len, hidden_dim)
-    return hidden.float()  # convert from bfloat16 to float32 for MLP
+    if backend == "mlx":
+        import mlx.core as mx
+        import numpy as np
+        
+        # MLX strictly runs on np/mx arrays natively
+        inputs = mx.array(input_ids.cpu().numpy())
+        
+        # Locate the transformer trunk depending on mlx-lm model architecture
+        trunk = getattr(model, "model", None)
+        if hasattr(model, "language_model"):
+            trunk = getattr(model.language_model, "model", trunk)
+            
+        if trunk is not None:
+            # Forward directly through Qwen/Llama trunk without lm_head
+            hidden = trunk(inputs)
+        else:
+            raise ValueError("MLX model trunk not found.")
+            
+        # Float conversions: explicitly cast to float32 in MLX *before* numpy, 
+        # because numpy/torch lack native bfloat16 stable support in many cases.
+        hidden_fp32 = hidden.astype(mx.float32)
+        hidden_torch = torch.from_numpy(np.array(hidden_fp32))
+        return hidden_torch.to(input_ids.device)
+
+    else:
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_hidden_states=True,
+        )
+        hidden = outputs.hidden_states[-1]
+        return hidden.float()
 
 
 def expand_to_char_embeddings(
@@ -109,42 +131,119 @@ def expand_to_char_embeddings(
 
 @torch.no_grad()
 def compute_perplexity(
-    model: AutoModelForCausalLM,
-    tokenizer: AutoTokenizer,
+    model: Any,
+    tokenizer: Any,
     text: str,
     device: torch.device | None = None,
+    backend: str = "transformers"
 ) -> float:
-    """
-    Compute the perplexity of a given text string.
+    # We maintain this helper but now redirect to batch logic for simplicity.
+    return compute_perplexity_batch(model, tokenizer, [text], device, backend)[0]
 
-    Args:
-        model: Minerva model
-        tokenizer: Minerva tokenizer
-        text: input text string
-        device: computation device
 
-    Returns:
-        perplexity (float)
+@torch.no_grad()
+def compute_perplexity_batch(
+    model: Any,
+    tokenizer: Any,
+    texts: list[str],
+    device: torch.device | None = None,
+    backend: str = "transformers"
+) -> list[float]:
     """
+    Compute the perplexity of a list of text strings in batch.
+    """
+    if not texts:
+        return []
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        
+    pad_id = getattr(tokenizer, "pad_token_id", tokenizer.eos_token_id)
+
+    if backend == "mlx":
+        import mlx.core as mx
+        import mlx.nn as nn
+        import numpy as np
+        
+        encoding = tokenizer(
+            texts,
+            return_tensors="np",
+            padding=True,
+            add_special_tokens=True
+        )
+        input_ids = mx.array(encoding["input_ids"])
+        
+        if input_ids.shape[1] < 2:
+            # Not enough tokens to shift and compute loss
+            return [1e6] * len(texts)
+        
+        logits = model(input_ids)
+        
+        shift_logits = logits[..., :-1, :]
+        shift_labels = input_ids[..., 1:]
+        
+        losses = nn.losses.cross_entropy(shift_logits, shift_labels)
+        mask = (shift_labels != pad_id)
+        
+        masked_losses = losses * mask
+        sum_loss = mx.sum(masked_losses, axis=1)
+        valid_tokens = mx.sum(mask, axis=1)
+        
+        seq_loss = sum_loss / mx.maximum(valid_tokens, 1.0)
+        perplexities = mx.exp(seq_loss)
+        return np.array(perplexities).tolist()
+
     if device is None:
         device = next(model.parameters()).device
 
-    encoding = tokenizer(text, return_tensors="pt", add_special_tokens=True)
+    # Tokenize with padding
+    encoding = tokenizer(
+        texts,
+        return_tensors="pt",
+        padding=True,
+        add_special_tokens=True
+    )
     input_ids = encoding["input_ids"].to(device)
+    attention_mask = encoding["attention_mask"].to(device)
 
     if input_ids.shape[1] < 2:
-        return float("inf")
+        return [1e6] * len(texts)
 
-    outputs = model(input_ids=input_ids, labels=input_ids)
-    loss = outputs.loss.item()
-    return torch.exp(torch.tensor(loss)).item()
+    labels = input_ids.clone()
+    labels[attention_mask == 0] = -100
+
+    outputs = model(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+    )
+    
+    logits = outputs.logits 
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = labels[..., 1:].contiguous()
+    
+    loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
+    shift_logits = shift_logits.view(-1, shift_logits.size(-1))
+    shift_labels = shift_labels.view(-1)
+    
+    token_loss = loss_fct(shift_logits, shift_labels)
+    token_loss = token_loss.view(input_ids.shape[0], -1) 
+    
+    shift_mask = (shift_labels != -100).view(input_ids.shape[0], -1).float()
+    sum_loss = (token_loss * shift_mask).sum(dim=1)
+    active_tokens = shift_mask.sum(dim=1)
+    
+    seq_loss = sum_loss / torch.clamp(active_tokens, min=1.0)
+    perplexities = torch.exp(seq_loss).cpu().tolist()
+    
+    return perplexities
 
 
 def extract_and_cache_embeddings(
-    model: AutoModelForCausalLM,
+    model: Any,
     dataloader,
     device: torch.device,
     cache_name: str = "train",
+    backend: str = "transformers"
 ) -> Path:
     """
     Extract embeddings for all batches in a dataloader and save to disk.
@@ -170,7 +269,7 @@ def extract_and_cache_embeddings(
         char_to_token = batch["char_to_token"].to(device)
 
         # Extract token embeddings
-        tok_emb = extract_token_embeddings(model, input_ids, attention_mask)
+        tok_emb = extract_token_embeddings(model, input_ids, attention_mask, backend=backend)
 
         # Expand to character level
         char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
@@ -181,6 +280,7 @@ def extract_and_cache_embeddings(
                 "char_embeddings": char_emb.cpu(),
                 "char_labels": batch["char_labels"],
                 "char_mask": batch["char_mask"],
+                "spaceless": batch["spaceless"],
             },
             save_file,
         )

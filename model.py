@@ -24,15 +24,26 @@ class SpacePredictorMLP(nn.Module):
 
     def __init__(self, hidden_dim: int = 2048, dropout: float = 0.2):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(hidden_dim, 512),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(256, 1),
+        
+        self.hidden_dim = hidden_dim
+        
+        # 1. Feature Extractor (Contesto Locale)
+        # kernel_size=5 con padding=2 significa che per il token [i], 
+        # la rete guarda [i-2, i-1, i, i+1, i+2]
+        self.conv = nn.Conv1d(
+            in_channels=hidden_dim, 
+            out_channels=256, 
+            kernel_size=5, 
+            padding=2
         )
+        
+        # 2. Stabilizzazione del Segnale
+        self.norm = nn.LayerNorm(256)
+        self.gelu = nn.GELU()
+        self.drop = nn.Dropout(dropout)
+        
+        # 3. Classificatore Finale
+        self.classifier = nn.Linear(256, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -41,5 +52,17 @@ class SpacePredictorMLP(nn.Module):
         Returns:
             (batch, seq_len) space probabilities in [0, 1]
         """
-        logits = self.net(x).squeeze(-1)  # (batch, seq_len)
+        x = x.transpose(1, 2)
+        
+        # Applichiamo la convoluzione spaziale
+        x = self.conv(x)
+        
+        # Torniamo alla shape standard (batch, seq_len, features) per LayerNorm e Linear
+        x = x.transpose(1, 2)
+        
+        # Raffinamento e classificazione
+        x = self.norm(x)
+        x = self.gelu(x)
+        x = self.drop(x)
+        logits = self.classifier(x).squeeze(-1)  # (batch, seq_len)
         return torch.sigmoid(logits)

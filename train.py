@@ -10,12 +10,12 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
 from data import get_dataloader, MODEL_NAME, WordSplitDataset, collate_fn
 from embeddings import (
-    load_minerva,
+    load_language_model,
     extract_and_cache_embeddings,
     get_device,
     CACHE_DIR,
@@ -45,12 +45,13 @@ class CachedEmbeddingDataset(Dataset):
             batch_size = data["char_embeddings"].shape[0]
             for i in range(batch_size):
                 mask = data["char_mask"][i]
-                self.samples.append(
-                    {
-                        "char_embeddings": data["char_embeddings"][i][mask],
-                        "char_labels": data["char_labels"][i][mask],
-                    }
-                )
+                sample = {
+                    "char_embeddings": data["char_embeddings"][i][mask],
+                    "char_labels": data["char_labels"][i][mask],
+                }
+                if "spaceless" in data:
+                    sample["spaceless"] = data["spaceless"][i]
+                self.samples.append(sample)
 
     def __len__(self):
         return len(self.samples)
@@ -78,17 +79,21 @@ def cached_collate_fn(batch):
         "char_embeddings": embeddings,
         "char_labels": labels,
         "char_mask": mask,
+        "spaceless": [s.get("spaceless", "") for s in batch],
     }
 
 
 # ── Phase 1: Extract embeddings ──────────────────────────────────────────────
 
-def extract_embeddings(batch_size: int = 16):
+def extract_embeddings(batch_size: int = 16, backend: str = "transformers"):
     """Extract Minerva embeddings for all splits and cache to disk."""
     device = get_device()
-    model, tokenizer = load_minerva(device)
+    model, tokenizer = load_language_model(backend, device)
 
-    for split in ("train", "dev", "test"):
+    from data import UD_URLS
+    splits_to_extract = list(UD_URLS.keys())
+
+    for split in splits_to_extract:
         print(f"\n{'='*60}")
         print(f"Extracting embeddings for {split} split...")
         print(f"{'='*60}")
@@ -105,9 +110,10 @@ def extract_embeddings(batch_size: int = 16):
             dataloader=loader,
             device=device,
             cache_name=split,
+            backend=backend,
         )
 
-    # Free GPU memory
+    # Free memory
     del model
     torch.cuda.empty_cache() if torch.cuda.is_available() else None
     print("\n✓ All embeddings extracted and cached.")
@@ -120,18 +126,27 @@ def train_mlp(
     batch_size: int = 32,
     lr: float = 1e-3,
     dropout: float = 0.2,
-    hidden_dim: int = 2048,
     pos_weight: float = 2.0,
     patience: int = 7,
+    train_splits: list[str] = None,
+    dev_splits: list[str] = None,
 ):
+    if train_splits is None:
+        train_splits = ["train"]
+    if dev_splits is None:
+        dev_splits = ["dev"]
     """Train the space-prediction MLP on cached embeddings."""
     device = get_device()
     CHECKPOINT_DIR.mkdir(exist_ok=True)
 
     # Load cached embeddings
-    print("Loading cached embeddings...")
-    train_ds = CachedEmbeddingDataset(CACHE_DIR / "train")
-    dev_ds = CachedEmbeddingDataset(CACHE_DIR / "dev")
+    print(f"Loading cached embeddings... Train: {train_splits}, Dev: {dev_splits}")
+    train_ds = ConcatDataset([CachedEmbeddingDataset(CACHE_DIR / s) for s in train_splits])
+    dev_ds = ConcatDataset([CachedEmbeddingDataset(CACHE_DIR / s) for s in dev_splits])
+    
+    # Auto-detect hidden dimension from extracted embeddings
+    hidden_dim = train_ds[0]["char_embeddings"].shape[-1]
+    print(f"Detected model hidden_dim: {hidden_dim}")
 
     train_loader = DataLoader(
         train_ds,
@@ -236,11 +251,15 @@ def evaluate(
     model: SpacePredictorMLP,
     dataloader: DataLoader,
     device: torch.device,
+    top_k_errors: int = 0,
 ) -> dict:
     """Evaluate the MLP on a dataset, return metrics."""
     model.eval()
     all_preds = []
     all_labels = []
+    exact_matches = 0
+    total_samples = 0
+    error_details = []  # List of (error_count, text, pred_text, true_text)
 
     for batch in dataloader:
         emb = batch["char_embeddings"].to(device)
@@ -248,23 +267,55 @@ def evaluate(
         mask = batch["char_mask"]
 
         preds = model(emb).cpu()
+        texts = batch.get("spaceless", [""] * preds.shape[0])
 
         # Collect valid predictions
         for i in range(preds.shape[0]):
             valid = mask[i]
-            all_preds.extend((preds[i][valid] > 0.5).int().tolist())
-            all_labels.extend(labels[i][valid].int().tolist())
+            p = (preds[i][valid] > 0.5).int()
+            l = labels[i][valid].int()
+            
+            p_list = p.tolist()
+            l_list = l.tolist()
+            all_preds.extend(p_list)
+            all_labels.extend(l_list)
+            
+            error_count = (p != l).sum().item()
+            if torch.equal(p, l):
+                exact_matches += 1
+            elif top_k_errors > 0:
+                # Helper to reconstruct text from space mask
+                def reconstruct(base, mask):
+                    res = []
+                    for char, m in zip(base, mask):
+                        res.append(char)
+                        if m == 0: res.append(" ")
+                    return "".join(res)
+                
+                error_details.append({
+                    "errors": error_count,
+                    "text": texts[i],
+                    "pred": reconstruct(texts[i], p_list),
+                    "true": reconstruct(texts[i], l_list)
+                })
+            total_samples += 1
 
     precision, recall, f1, _ = precision_recall_fscore_support(
         all_labels, all_preds, average="binary", zero_division=0
     )
     accuracy = accuracy_score(all_labels, all_preds)
+    em = exact_matches / total_samples if total_samples > 0 else 0.0
+
+    # Sort error details by number of errors descending
+    worst_samples = sorted(error_details, key=lambda x: x["errors"], reverse=True)[:top_k_errors]
 
     return {
         "accuracy": accuracy,
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "exact_match": em,
+        "worst_samples": worst_samples,
     }
 
 

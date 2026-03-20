@@ -25,12 +25,18 @@ UD_URLS = {
     "train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ISDT/master/it_isdt-ud-train.conllu",
     "dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ISDT/master/it_isdt-ud-dev.conllu",
     "test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ISDT/master/it_isdt-ud-test.conllu",
+    "test2": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-test.conllu",
+    "train2": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-train.conllu",
+    "dev2": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-dev.conllu",
+    "engTrain": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-train.conllu",
+    "engDev": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-dev.conllu",
+    "engTest": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-test.conllu",
+    "test3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-test.conllu",
 }
 
 CACHE_DIR = Path(__file__).parent / "data_cache"
 
-MODEL_NAME = "sapienzanlp/Minerva-1B-base-v1.0"
-
+from embeddings import MODEL_NAME
 
 def download_ud_file(split: str) -> Path:
     """Download a UD conllu file if not already cached."""
@@ -153,11 +159,20 @@ class WordSplitDataset(Dataset):
         tokenizer: Optional[AutoTokenizer] = None,
         max_chars: int = 512,
     ):
-        assert split in ("train", "dev", "test"), f"Invalid split: {split}"
+        assert split in ("train", "dev", "test", "test2", "train2", "dev2", "engTrain", "engDev", "engTest", "test3"), f"Invalid split: {split}"
 
         # Load and parse UD data
         path = download_ud_file(split)
         self.sentences = parse_conllu(path)
+
+        if split == "engTrain":
+            self.sentences = self.sentences[:2773]
+        elif split == "engDev":
+            self.sentences = self.sentences[:185]
+        elif split == "engTest":
+            self.sentences = self.sentences[:173]
+        
+
 
         # Tokenizer
         if tokenizer is None:
@@ -217,6 +232,7 @@ def collate_fn(batch: list[dict]) -> dict:
         "char_labels": char_labels,
         "char_to_token": char_to_token,
         "char_mask": char_mask,
+        "spaceless": [s["spaceless"] for s in batch],
     }
 
 
