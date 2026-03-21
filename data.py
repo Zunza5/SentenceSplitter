@@ -32,6 +32,14 @@ UD_URLS = {
     "engDev": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-dev.conllu",
     "engTest": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-test.conllu",
     "test3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-test.conllu",
+    "train3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-train.conllu",
+    "dev3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-dev.conllu",
+    "test4": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-test.conllu",
+    "train4": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-train.conllu",
+    "dev4": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-dev.conllu",
+    "train5": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParTUT/refs/heads/master/it_partut-ud-train.conllu",
+    "test5": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParTUT/refs/heads/master/it_partut-ud-test.conllu",
+    "dev5": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParTUT/refs/heads/master/it_partut-ud-dev.conllu",
 }
 
 CACHE_DIR = Path(__file__).parent / "data_cache"
@@ -159,7 +167,7 @@ class WordSplitDataset(Dataset):
         tokenizer: Optional[AutoTokenizer] = None,
         max_chars: int = 512,
     ):
-        assert split in ("train", "dev", "test", "test2", "train2", "dev2", "engTrain", "engDev", "engTest", "test3"), f"Invalid split: {split}"
+        assert split in ("train", "dev", "test", "test2", "train2", "dev2", "engTrain", "engDev", "engTest", "test3", "train3", "dev3"), f"Invalid split: {split}"
 
         # Load and parse UD data
         path = download_ud_file(split)

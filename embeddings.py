@@ -243,7 +243,8 @@ def extract_and_cache_embeddings(
     dataloader,
     device: torch.device,
     cache_name: str = "train",
-    backend: str = "transformers"
+    backend: str = "transformers",
+    base_cache_dir: Path | None = None,
 ) -> Path:
     """
     Extract embeddings for all batches in a dataloader and save to disk.
@@ -256,7 +257,9 @@ def extract_and_cache_embeddings(
     Returns:
         Path to the cache directory
     """
-    cache_path = CACHE_DIR / cache_name
+    if base_cache_dir is None:
+        base_cache_dir = CACHE_DIR
+    cache_path = base_cache_dir / cache_name
     cache_path.mkdir(parents=True, exist_ok=True)
 
     for batch_idx, batch in enumerate(dataloader):
@@ -280,7 +283,7 @@ def extract_and_cache_embeddings(
                 "char_embeddings": char_emb.cpu(),
                 "char_labels": batch["char_labels"],
                 "char_mask": batch["char_mask"],
-                "spaceless": batch["spaceless"],
+                "spaceless": batch.get("spaceless", batch.get("text", [])),
             },
             save_file,
         )
