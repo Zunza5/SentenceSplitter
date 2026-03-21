@@ -13,14 +13,14 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, ConcatDataset
 
 from data_sentence import get_sentence_dataloader
-from train import CachedEmbeddingDataset, cached_collate_fn, evaluate
+from wordSplitter.train import CachedEmbeddingDataset, cached_collate_fn, evaluate
 from wordSplitter.embeddings import (
     load_language_model,
     extract_and_cache_embeddings,
     get_device,
 )
-from model import SpacePredictorMLP, FocalLoss
-from data import UD_URLS
+from wordSplitter.model import SpacePredictorMLP, FocalLoss
+from wordSplitter.data import UD_URLS
 
 SENTENCE_CACHE_DIR = Path(__file__).parent / "sentence_embedding_cache"
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"

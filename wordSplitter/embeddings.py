@@ -17,7 +17,8 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-MODEL_NAME = "mlx-community/Qwen3.5-2B-MLX-8bit"
+#MODEL_NAME = "mlx-community/Qwen3.5-2B-MLX-8bit"
+MODEL_NAME = 'Qwen/Qwen3.5-2B'
 CACHE_DIR = Path(__file__).parent.parent / "embedding_cache"
 
 

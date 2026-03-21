@@ -30,7 +30,7 @@ try:
 except Exception as e:
     print(f"Warning: Could not initialize NLTK Italian dictionary: {e}")
 
-from model import SpacePredictorMLP
+from wordSplitter.model import SpacePredictorMLP
 from wordSplitter.embeddings import (
     load_language_model,
     extract_token_embeddings,
@@ -39,7 +39,7 @@ from wordSplitter.embeddings import (
     compute_perplexity_batch,
     get_device,
 )
-from data import build_char_to_token_map
+from wordSplitter.data import build_char_to_token_map
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 

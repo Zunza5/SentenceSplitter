@@ -62,7 +62,7 @@ class SentenceSplitterGUI:
         try:
             self.device = get_device()
             # Hardcoding mlx since it's the fastest on Apple Silicon
-            backend = "mlx"
+            backend = "transformers"
             self.llm_model, self.tokenizer = load_language_model(backend=backend, device=self.device)
             self.mlp = load_sentence_mlp(device=self.device)
             self.mlp.eval()
@@ -104,7 +104,7 @@ class SentenceSplitterGUI:
                     llm_model=self.llm_model,
                     tokenizer=self.tokenizer,
                     device=self.device,
-                    backend="mlx",
+                    backend="transformers",
                     threshold=0.5
                 )
                 

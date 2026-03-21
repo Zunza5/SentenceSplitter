@@ -13,14 +13,14 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from data import get_dataloader, MODEL_NAME, WordSplitDataset, collate_fn
+from wordSplitter.data import get_dataloader, MODEL_NAME, WordSplitDataset, collate_fn
 from wordSplitter.embeddings import (
     load_language_model,
     extract_and_cache_embeddings,
     get_device,
     CACHE_DIR,
 )
-from model import SpacePredictorMLP
+from wordSplitter.model import SpacePredictorMLP
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 
@@ -90,7 +90,7 @@ def extract_embeddings(batch_size: int = 16, backend: str = "transformers"):
     device = get_device()
     model, tokenizer = load_language_model(backend, device)
 
-    from data import UD_URLS
+    from wordSplitter.data import UD_URLS
     splits_to_extract = list(UD_URLS.keys())
 
     for split in splits_to_extract:

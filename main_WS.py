@@ -14,7 +14,7 @@ import torch
 
 def cmd_train(args):
     """Run the training pipeline."""
-    from train import extract_embeddings, train_mlp
+    from wordSplitter.train import extract_embeddings, train_mlp
 
     if args.phase in ("extract", "both"):
         extract_embeddings(batch_size=args.extract_batch_size, backend=args.backend)
@@ -33,7 +33,7 @@ def cmd_train(args):
 
 def cmd_split(args):
     """Run inference to split text."""
-    from inference import load_mlp, mlp_predict
+    from wordSplitter.inference import load_mlp, mlp_predict
     from wordSplitter.embeddings import load_language_model, get_device
 
     device = get_device()
@@ -68,8 +68,8 @@ def cmd_split(args):
 
 def cmd_eval(args):
     """Evaluate the MLP on the test set."""
-    from train import CachedEmbeddingDataset, cached_collate_fn, evaluate
-    from inference import load_mlp
+    from wordSplitter.train import CachedEmbeddingDataset, cached_collate_fn, evaluate
+    from wordSplitter.inference import load_mlp
     from wordSplitter.embeddings import get_device, CACHE_DIR
     from torch.utils.data import DataLoader, ConcatDataset
 

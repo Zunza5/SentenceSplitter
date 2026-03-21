@@ -38,6 +38,18 @@ This guide provides detailed instructions on how to use the Sentence Splitter CL
 
 ---
 
+### Benchmark results (using Qwen3.5-2B-MLX-8bit)
+
+<img src="f1_comparison.png" alt="F1 Score Comparison" width="600">
+
+## Summary of Findings
+
+* **Formal Text:** Both SpaCy and LLM show excellent performance (~0.99 F1).
+* **Social Media/Noisy Text:** The LLM significantly outperforms SpaCy (up to +50% F1 improvement on PoSTWITA/TWITTIRO).
+* **Generalization:** The LLM proves to be more "out-of-the-box" ready for diverse linguistic domains compared to traditional pipeline-based models.
+
+---
+
 ## Command-Line Interface Guide
 
 The `main_sentence.py` script serves as the central entry point for all operations, including training, evaluation, and live inference.
@@ -138,12 +150,3 @@ Both benchmark scripts output the following metrics:
 * **Total Inference Time**: The total time taken to process the chosen split.
 * **Avg Time per Chunk**: The average processing speed in milliseconds (ms) per text segment.omparison with SpaCy's `it_core_news_lg` model to benchmark accuracy and speed.
 
-### Benchmark results
-
-<img src="f1_comparison.png" alt="F1 Score Comparison" width="600">
-
-## Summary of Findings
-
-* **Formal Text:** Both SpaCy and LLM show excellent performance (~0.99 F1).
-* **Social Media/Noisy Text:** The LLM significantly outperforms SpaCy (up to +50% F1 improvement on PoSTWITA/TWITTIRO).
-* **Generalization:** The LLM proves to be more "out-of-the-box" ready for diverse linguistic domains compared to traditional pipeline-based models.
