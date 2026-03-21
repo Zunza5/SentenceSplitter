@@ -201,6 +201,50 @@ def plot_combined_results(results):
     plt.savefig("f1_comparison.png", dpi=300)
     print("\nSaved F1 comparison graph to f1_comparison.png")
 
+def plot_time_comparison(results):
+    SPLIT_NAMES = {
+        "test": "ISDT (IT)",
+        "test2": "PoSTWITA (IT)",
+        "test3": "VIT (IT)",
+        "test4": "TWITTIRO (IT)",
+        "test5": "ParTUT (IT)",
+        "engTest": "EWT (EN)"
+    }
+    splits = [SPLIT_NAMES.get(r[0], r[0]) for r in results]
+    
+    spacy_time = [(r[1]['total_time'] / max(r[1]['num_processed'], 1)) * 1000 for r in results]
+    llm_time = [(r[2]['total_time'] / max(r[2]['num_processed'], 1)) * 1000 for r in results]
+    
+    x = np.arange(len(splits))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    rects1 = ax.bar(x - width/2, spacy_time, width, label='SpaCy (it_core_news_lg)', color='#1f77b4')
+    rects2 = ax.bar(x + width/2, llm_time, width, label='LLM (MLX)', color='#ff7f0e')
+    
+    ax.set_ylabel('Avg Time/Chunk (ms)')
+    ax.set_title('Inference Speed Comparison by Test Split')
+    ax.set_xticks(x)
+    ax.set_xticklabels(splits)
+    ax.legend(loc='upper right')
+    
+    def autolabel(rects):
+        """Attach a text label above each bar in *rects*, displaying its height."""
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.1f}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=8)
+                        
+    autolabel(rects1)
+    autolabel(rects2)
+    
+    fig.tight_layout()
+    plt.savefig("time_comparison.png", dpi=300)
+    print("\nSaved time comparison graph to time_comparison.png")
+
 def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
     parser.add_argument("--test-splits", type=str, default="test,test2,test3,test4,test5,engTest", help="Comma-separated test splits")
@@ -256,6 +300,7 @@ def main():
             
     if all_results:
         plot_combined_results(all_results)
+        plot_time_comparison(all_results)
 
 if __name__ == "__main__":
     main()
