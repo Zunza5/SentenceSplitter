@@ -103,11 +103,6 @@ python main_sentence.py split "This is the first sentence. And this is the secon
 ```
 
 ---
-
-Here is the detailed documentation for the Command-Line Interface (CLI) and benchmark scripts in English:
-
----
-
 ## 2. Benchmark Scripts
 
 These specialized scripts provide deeper insights into the model's accuracy and computational efficiency.
