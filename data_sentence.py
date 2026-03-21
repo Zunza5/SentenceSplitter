@@ -25,7 +25,7 @@ import re
 from embeddings import MODEL_NAME
 
 # Reusing UD_URLS and CACHE_DIR from data.py
-from data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu
+from wordSplitter.data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu
 
 
 def chunk_sentences(sentences: list[list[str]], chunk_size: int = 5) -> list[list[list[str]]]:

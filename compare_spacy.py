@@ -9,8 +9,8 @@ from embeddings import load_language_model, extract_token_embeddings, expand_to_
 from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
-def evaluate_minerva(dataloader, llm_model, tokenizer, mlp, device, backend="mlx"):
-    print(f"\n--- Running Minerva Inference on {len(dataloader.dataset)} chunks ---")
+def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx"):
+    print(f"\n--- Running LLM Inference on {len(dataloader.dataset)} chunks ---")
     all_preds = []
     all_labels = []
     
@@ -37,14 +37,14 @@ def evaluate_minerva(dataloader, llm_model, tokenizer, mlp, device, backend="mlx
             
             for b in range(preds.shape[0]):
                 valid = mask[b]
-                p = (preds[b][valid] > 0.4).int().cpu().tolist()
+                p = (preds[b][valid] > 0.5).int().cpu().tolist()
                 l = labels[b][valid].int().cpu().tolist()
                 all_preds.extend(p)
                 all_labels.extend(l)
                 num_processed += 1
                 
             if (i + 1) % 10 == 0:
-                print(f" Minerva: Batch {i+1}/{len(dataloader)} processed...")
+                print(f" LLM: Batch {i+1}/{len(dataloader)} processed...")
 
     precision, recall, f1, _ = precision_recall_fscore_support(
         all_labels, all_preds, average="binary", zero_division=0
@@ -134,32 +134,32 @@ def evaluate_spacy(dataloader, nlp_model):
         "num_processed": num_processed
     }
 
-def print_comparison(spacy_res, minerva_res):
+def print_comparison(spacy_res, llm_res):
     print("\n" + "="*60)
     print("                 PERFORMANCE COMPARISON                 ")
     print("="*60)
-    print(f"{'Metric':<20} | {'SpaCy (it_core_news_lg)':<20} | {'Minerva (MLX)':<15}")
+    print(f"{'Metric':<20} | {'SpaCy (it_core_news_lg)':<20} | {'LLM (MLX)':<15}")
     print("-" * 60)
-    print(f"{'Chunks Processed':<20} | {spacy_res['num_processed']:<20} | {minerva_res['num_processed']:<15}")
-    print(f"{'Accuracy':<20} | {spacy_res['accuracy']:<20.4f} | {minerva_res['accuracy']:<15.4f}")
-    print(f"{'Precision':<20} | {spacy_res['precision']:<20.4f} | {minerva_res['precision']:<15.4f}")
-    print(f"{'Recall':<20} | {spacy_res['recall']:<20.4f} | {minerva_res['recall']:<15.4f}")
-    print(f"{'F1 Score':<20} | {spacy_res['f1']:<20.4f} | {minerva_res['f1']:<15.4f}")
+    print(f"{'Chunks Processed':<20} | {spacy_res['num_processed']:<20} | {llm_res['num_processed']:<15}")
+    print(f"{'Accuracy':<20} | {spacy_res['accuracy']:<20.4f} | {llm_res['accuracy']:<15.4f}")
+    print(f"{'Precision':<20} | {spacy_res['precision']:<20.4f} | {llm_res['precision']:<15.4f}")
+    print(f"{'Recall':<20} | {spacy_res['recall']:<20.4f} | {llm_res['recall']:<15.4f}")
+    print(f"{'F1 Score':<20} | {spacy_res['f1']:<20.4f} | {llm_res['f1']:<15.4f}")
     print("-" * 60)
     
     spacy_time = spacy_res['total_time']
-    min_time = minerva_res['total_time']
+    min_time = llm_res['total_time']
     spacy_avg = (spacy_time / spacy_res['num_processed']) * 1000
-    minerva_avg = (min_time / minerva_res['num_processed']) * 1000
+    llm_avg = (min_time / llm_res['num_processed']) * 1000
     
     print(f"{'Total Time (s)':<20} | {spacy_time:<20.4f} | {min_time:<15.4f}")
-    print(f"{'Avg Time/Chunk (ms)':<20} | {spacy_avg:<20.2f} | {minerva_avg:<15.2f}")
+    print(f"{'Avg Time/Chunk (ms)':<20} | {spacy_avg:<20.2f} | {llm_avg:<15.2f}")
     print("="*60)
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare SpaCy and Minerva Performance")
+    parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
     parser.add_argument("--split", type=str, default="test", help="Dataset split to test")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for Minerva inference")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for LLM inference")
     args = parser.parse_args()
     
     device = get_device()
@@ -175,7 +175,7 @@ def main():
         tokenizer=tokenizer,
         shuffle=False,
         max_chars=4096, 
-        chunk_size=2,  
+        chunk_size=10,  
         augmentation_mode="original"
     )
 
@@ -190,18 +190,18 @@ def main():
         
     spacy_results = evaluate_spacy(dataloader, nlp)
     
-    # 3. Run Minerva
-    print("\nLoading Minerva MLP...")
+    # 3. Run LLM
+    print("\nLoading LLM MLP...")
     checkpoint_path = Path("checkpoints/best_sentence_mlp.pt")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     mlp = SpacePredictorMLP(hidden_dim=checkpoint.get("hidden_dim", 2048), dropout=0.0).to(device)
     mlp.load_state_dict(checkpoint["model_state_dict"])
     mlp.eval()
     
-    minerva_results = evaluate_minerva(dataloader, llm_model, tokenizer, mlp, device, backend=backend)
+    llm_results = evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend=backend)
     
     # 4. Print Comparison
-    print_comparison(spacy_results, minerva_results)
+    print_comparison(spacy_results, llm_results)
 
 if __name__ == "__main__":
     main()

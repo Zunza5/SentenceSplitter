@@ -1,8 +1,8 @@
 """
-Minerva embedding extraction and perplexity computation.
+LLM embedding extraction and perplexity computation.
 
 Handles:
-  - Loading the Minerva model
+  - Loading the LLM model
   - Extracting last-layer hidden states
   - Expanding token-level embeddings to character-level
   - Computing perplexity for the verification step

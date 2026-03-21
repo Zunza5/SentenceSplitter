@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from model import SpacePredictorMLP
 from embeddings import load_language_model, get_device
-from inference import load_mlp, mlp_predict
+from wordSplitter.inference import load_mlp, mlp_predict
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 BEST_SENTENCE_CKPT = CHECKPOINT_DIR / "best_sentence_mlp.pt"
@@ -22,7 +22,7 @@ def load_sentence_mlp(checkpoint_path: Path | None = None, device: torch.device 
 def split_into_sentences(
     text: str,
     mlp: SpacePredictorMLP,
-    minerva_model: any,
+    llm_model: any,
     tokenizer: any,
     device: torch.device,
     backend: str = "transformers",
@@ -49,7 +49,7 @@ def split_into_sentences(
     attention_mask = torch.ones_like(input_ids_t)
     char_to_token_t = torch.tensor([char_to_token], dtype=torch.long, device=device)
     
-    tok_emb = extract_token_embeddings(minerva_model, input_ids_t, attention_mask, backend=backend)
+    tok_emb = extract_token_embeddings(llm_model, input_ids_t, attention_mask, backend=backend)
     char_emb = expand_to_char_embeddings(tok_emb, char_to_token_t)
     
     probs = mlp(char_emb).squeeze(0).cpu().tolist()

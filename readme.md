@@ -6,7 +6,7 @@ This repository provides a lightweight, character-level sentence boundary predic
 
 The sentence splitting method operates at the character level to precisely locate sentence boundaries (e.g., spaces and punctuation). The architecture consists of the following pipeline:
 
-1. **Embedding Extraction**: The input text is processed by a base LLM (such as Minerva or Qwen) to extract token embeddings.
+1. **Embedding Extraction**: The input text is processed by a base LLM (such as Qwen) to extract token embeddings.
 2. **Character Expansion**: The token-level embeddings are expanded to character-level embeddings using a mapping algorithm.
 3. **SpacePredictorMLP**: The core model is a lightweight Multi-Layer Perceptron (MLP) combined with a `MultiScaleConv1d` block. Self-attention was deliberately removed to prevent overfitting on small datasets.
    - **Multi-Scale CNN**: Captures context at three different scales using parallel branches:

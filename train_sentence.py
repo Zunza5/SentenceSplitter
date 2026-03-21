@@ -1,7 +1,7 @@
 """
 Training pipeline for Sentence Splitter MLP.
 
-Phase 1: Extract Minerva embeddings offline for sentence chunks and cache.
+Phase 1: Extract LLM embeddings offline for sentence chunks and cache.
 Phase 2: Train the MLP on cached sentence-level embeddings.
 """
 
@@ -28,7 +28,7 @@ BEST_SENTENCE_CKPT = CHECKPOINT_DIR / "best_sentence_mlp.pt"
 
 
 def extract_sentence_embeddings(batch_size: int = 8, backend: str = "transformers", augment_prob: float = 0.0):
-    """Extract Minerva embeddings for sentence documents and cache them."""
+    """Extract LLM embeddings for sentence documents and cache them."""
     device = get_device()
     model, tokenizer = load_language_model(backend, device)
 

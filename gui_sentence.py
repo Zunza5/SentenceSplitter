@@ -11,7 +11,7 @@ from inference_sentence import load_sentence_mlp, split_into_sentences
 class SentenceSplitterGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Minerva Sentence Splitter")
+        self.root.title("Sentence Splitter")
         self.root.geometry("800x600")
         
         # UI Setup
@@ -101,7 +101,7 @@ class SentenceSplitterGUI:
                 sentences = split_into_sentences(
                     text=text,
                     mlp=self.mlp,
-                    minerva_model=self.llm_model,
+                    llm_model=self.llm_model,
                     tokenizer=self.tokenizer,
                     device=self.device,
                     backend="mlx",

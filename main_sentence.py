@@ -49,13 +49,13 @@ def cmd_eval(args):
 
 def cmd_split(args):
     device = get_device()
-    minerva_model, tokenizer = load_language_model(args.backend, device)
+    llm_model, tokenizer = load_language_model(args.backend, device)
     mlp = load_sentence_mlp(device=device)
     
     sentences = split_into_sentences(
         text=args.text,
         mlp=mlp,
-        minerva_model=minerva_model,
+        llm_model=llm_model,
         tokenizer=tokenizer,
         device=device,
         backend=args.backend,
