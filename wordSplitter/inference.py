@@ -31,7 +31,7 @@ except Exception as e:
     print(f"Warning: Could not initialize NLTK Italian dictionary: {e}")
 
 from model import SpacePredictorMLP
-from embeddings import (
+from wordSplitter.embeddings import (
     load_language_model,
     extract_token_embeddings,
     expand_to_char_embeddings,

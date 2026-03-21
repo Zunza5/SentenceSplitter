@@ -44,7 +44,7 @@ UD_URLS = {
 
 CACHE_DIR = Path(__file__).parent.parent / "data_cache"
 
-from embeddings import MODEL_NAME
+from wordSplitter.embeddings import MODEL_NAME
 
 def download_ud_file(split: str) -> Path:
     """Download a UD conllu file if not already cached."""

@@ -4,8 +4,8 @@ Inference pipeline for Sentence Splitter.
 
 from pathlib import Path
 import torch
-from model import SpacePredictorMLP
-from embeddings import load_language_model, get_device
+from wordSplitter.model import SpacePredictorMLP
+from wordSplitter.embeddings import load_language_model, get_device
 from wordSplitter.inference import load_mlp, mlp_predict
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
@@ -40,7 +40,7 @@ def split_into_sentences(
     # to preserve original word-internal spaces.
     
     from data_sentence import build_sentence_char_to_token_map
-    from embeddings import extract_token_embeddings, expand_to_char_embeddings
+    from wordSplitter.embeddings import extract_token_embeddings, expand_to_char_embeddings
     
     # Custom prediction for sentence splitting (preserves spaces)
     input_ids, char_to_token = build_sentence_char_to_token_map(text, tokenizer)

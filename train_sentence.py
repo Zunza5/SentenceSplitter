@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, ConcatDataset
 
 from data_sentence import get_sentence_dataloader
 from train import CachedEmbeddingDataset, cached_collate_fn, evaluate
-from embeddings import (
+from wordSplitter.embeddings import (
     load_language_model,
     extract_and_cache_embeddings,
     get_device,

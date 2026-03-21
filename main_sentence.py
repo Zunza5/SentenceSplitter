@@ -9,8 +9,8 @@ import torch
 
 from train_sentence import extract_sentence_embeddings, train_sentence_mlp, SENTENCE_CACHE_DIR, BEST_SENTENCE_CKPT
 from inference_sentence import load_sentence_mlp, split_into_sentences
-from train import evaluate, CachedEmbeddingDataset, cached_collate_fn
-from embeddings import load_language_model, get_device
+from wordSplitter.train import evaluate, CachedEmbeddingDataset, cached_collate_fn
+from wordSplitter.embeddings import load_language_model, get_device
 from torch.utils.data import DataLoader, ConcatDataset
 
 def cmd_train(args):

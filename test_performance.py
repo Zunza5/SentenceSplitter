@@ -5,7 +5,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from wordSplitter.embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
 from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 

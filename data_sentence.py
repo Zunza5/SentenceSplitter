@@ -22,7 +22,7 @@ from transformers import AutoTokenizer
 import conllu
 import random
 import re
-from embeddings import MODEL_NAME
+from wordSplitter.embeddings import MODEL_NAME
 
 # Reusing UD_URLS and CACHE_DIR from data.py
 from wordSplitter.data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu

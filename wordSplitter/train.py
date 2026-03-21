@@ -14,7 +14,7 @@ from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
 from data import get_dataloader, MODEL_NAME, WordSplitDataset, collate_fn
-from embeddings import (
+from wordSplitter.embeddings import (
     load_language_model,
     extract_and_cache_embeddings,
     get_device,

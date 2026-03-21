@@ -129,7 +129,7 @@ python compare_spacy.py --split [SPLIT] --batch-size [SIZE]
 ```
 
 **Arguments:**
-* **`--split`**: The dataset split for comparison. Default is `test`.
+* **`--split`**: The dataset split for comparison
 * **`--batch-size`**: Batch size specifically for the Minerva inference part. Default is `32`.
 
 ### Metrics Reported
@@ -138,3 +138,6 @@ Both benchmark scripts output the following metrics:
 * **Total Inference Time**: The total time taken to process the chosen split.
 * **Avg Time per Chunk**: The average processing speed in milliseconds (ms) per text segment.omparison with SpaCy's `it_core_news_lg` model to benchmark accuracy and speed.
 
+### Benchmark results
+
+<img src="f1_comparison.png" alt="F1 Score Comparison" width="600">

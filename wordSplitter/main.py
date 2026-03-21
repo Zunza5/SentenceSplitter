@@ -34,7 +34,7 @@ def cmd_train(args):
 def cmd_split(args):
     """Run inference to split text."""
     from inference import load_mlp, mlp_predict
-    from embeddings import load_language_model, get_device
+    from wordSplitter.embeddings import load_language_model, get_device
 
     device = get_device()
 
@@ -70,7 +70,7 @@ def cmd_eval(args):
     """Evaluate the MLP on the test set."""
     from train import CachedEmbeddingDataset, cached_collate_fn, evaluate
     from inference import load_mlp
-    from embeddings import get_device, CACHE_DIR
+    from wordSplitter.embeddings import get_device, CACHE_DIR
     from torch.utils.data import DataLoader, ConcatDataset
 
     device = get_device()
@@ -152,10 +152,10 @@ Examples:
     train_parser.add_argument("--batch-size", type=int, default=32)
     train_parser.add_argument("--lr", type=float, default=1e-3)
     train_parser.add_argument("--dropout", type=float, default=0.2)
-    train_parser.add_argument("--pos-weight", type=float, default=0.3)
+    train_parser.add_argument("--pos-weight", type=float, default=0.2)
     train_parser.add_argument("--extract-batch-size", type=int, default=16)
-    train_parser.add_argument("--train-splits", type=str, default="train", help="Comma-separated list of training splits")
-    train_parser.add_argument("--dev-splits", type=str, default="dev", help="Comma-separated list of dev splits")
+    train_parser.add_argument("--train-splits", type=str, default="train,train2,train3,train4,train5,engTrain", help="Comma-separated list of training splits")
+    train_parser.add_argument("--dev-splits", type=str, default="dev,dev2,dev3,dev4,dev5,engDev", help="Comma-separated list of dev splits")
 
     # ── split ──
     split_parser = subparsers.add_parser("split", help="Split spaceless text")

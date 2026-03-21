@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL_NAME = "mlx-community/Qwen3.5-2B-MLX-8bit"
-CACHE_DIR = Path(__file__).parent / "embedding_cache"
+CACHE_DIR = Path(__file__).parent.parent / "embedding_cache"
 
 
 def get_device() -> torch.device:

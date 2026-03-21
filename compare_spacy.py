@@ -4,9 +4,11 @@ import argparse
 import spacy
 from pathlib import Path
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+import matplotlib.pyplot as plt
+import numpy as np
 
-from embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
-from model import SpacePredictorMLP
+from wordSplitter.embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from wordSplitter.model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
 def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx"):
@@ -156,30 +158,61 @@ def print_comparison(spacy_res, llm_res):
     print(f"{'Avg Time/Chunk (ms)':<20} | {spacy_avg:<20.2f} | {llm_avg:<15.2f}")
     print("="*60)
 
+def plot_combined_results(results):
+    SPLIT_NAMES = {
+        "test": "ISDT (IT)",
+        "test2": "PoSTWITA (IT)",
+        "test3": "VIT (IT)",
+        "test4": "TWITTIRO (IT)",
+        "test5": "ParTUT (IT)",
+        "engTest": "EWT (EN)"
+    }
+    splits = [SPLIT_NAMES.get(r[0], r[0]) for r in results]
+    spacy_f1 = [r[1]['f1'] for r in results]
+    llm_f1 = [r[2]['f1'] for r in results]
+    
+    x = np.arange(len(splits))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    rects1 = ax.bar(x - width/2, spacy_f1, width, label='SpaCy (it_core_news_lg)', color='#1f77b4')
+    rects2 = ax.bar(x + width/2, llm_f1, width, label='LLM (MLX)', color='#ff7f0e')
+    
+    ax.set_ylabel('F1 Score')
+    ax.set_title('F1 Score Comparison by Test Split')
+    ax.set_xticks(x)
+    ax.set_xticklabels(splits)
+    ax.legend()
+    
+    def autolabel(rects):
+        """Attach a text label above each bar in *rects*, displaying its height."""
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.3f}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=8)
+                        
+    autolabel(rects1)
+    autolabel(rects2)
+    
+    fig.tight_layout()
+    plt.savefig("f1_comparison.png", dpi=300)
+    print("\nSaved F1 comparison graph to f1_comparison.png")
+
 def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
-    parser.add_argument("--split", type=str, default="test", help="Dataset split to test")
+    parser.add_argument("--test-splits", type=str, default="test,test2,test3,test4,test5,engTest", help="Comma-separated test splits")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for LLM inference")
     args = parser.parse_args()
     
     device = get_device()
     backend = "mlx"
     
-    # 1. Load Data
-    print(f"Loading Test Data: {args.split} ...")
+    print("Loading LLM model and tokenizer...")
     llm_model, tokenizer = load_language_model(backend=backend, device=device)
     
-    dataloader = get_sentence_dataloader(
-        split=args.split,
-        batch_size=args.batch_size,
-        tokenizer=tokenizer,
-        shuffle=False,
-        max_chars=4096, 
-        chunk_size=10,  
-        augmentation_mode="original"
-    )
-
-    # 2. Run SpaCy
     print("\nLoading SpaCy model (it_core_news_lg)...")
     try:
         nlp = spacy.load("it_core_news_lg")
@@ -187,10 +220,7 @@ def main():
         print("SpaCy Italian model not found. Downloading...")
         spacy.cli.download("it_core_news_lg")
         nlp = spacy.load("it_core_news_lg")
-        
-    spacy_results = evaluate_spacy(dataloader, nlp)
     
-    # 3. Run LLM
     print("\nLoading LLM MLP...")
     checkpoint_path = Path("checkpoints/best_sentence_mlp.pt")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
@@ -198,10 +228,34 @@ def main():
     mlp.load_state_dict(checkpoint["model_state_dict"])
     mlp.eval()
     
-    llm_results = evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend=backend)
+    test_splits = [s.strip() for s in args.test_splits.split(",")]
+    all_results = []
     
-    # 4. Print Comparison
-    print_comparison(spacy_results, llm_results)
+    for split in test_splits:
+        print(f"\n{'='*60}")
+        print(f" evaluating split: {split}")
+        print(f"{'='*60}")
+        try:
+            dataloader = get_sentence_dataloader(
+                split=split,
+                batch_size=args.batch_size,
+                tokenizer=tokenizer,
+                shuffle=False,
+                max_chars=4096, 
+                chunk_size=10,  
+                augmentation_mode="original"
+            )
+            
+            spacy_results = evaluate_spacy(dataloader, nlp)
+            llm_results = evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend=backend)
+            
+            print_comparison(spacy_results, llm_results)
+            all_results.append((split, spacy_results, llm_results))
+        except Exception as e:
+            print(f"Failed to evaluate split {split}: {e}")
+            
+    if all_results:
+        plot_combined_results(all_results)
 
 if __name__ == "__main__":
     main()
