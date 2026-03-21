@@ -104,9 +104,42 @@ python main_sentence.py split "This is the first sentence. And this is the secon
 
 ---
 
-### 4. Benchmarking Scripts
-Beyond the main CLI, you can use specialized scripts for performance analysis:
+Here is the detailed documentation for the Command-Line Interface (CLI) and benchmark scripts in English:
 
-* **`test_performance.py`**: Calculates precision, recall, and average inference time in milliseconds per chunk.
-* **`compare_spacy.py`**: Runs a side-by-side comparison with SpaCy's `it_core_news_lg` model to benchmark accuracy and speed.
+---
+
+## 2. Benchmark Scripts
+
+These specialized scripts provide deeper insights into the model's accuracy and computational efficiency.
+
+### Performance Tester (`test_performance.py`)
+Evaluates the model and provides detailed timing for each phase (LLM extraction, expansion, and MLP prediction).
+
+**Syntax:**
+```bash
+python test_performance.py --split [SPLIT] --backend [BACKEND] --batch-size [SIZE]
+```
+
+**Arguments:**
+* **`--split`**: The dataset split to test (e.g., `test`, `engTest`). Default is `test`.
+* **`--backend`**: Use `transformers` or `mlx` engine. Default is `transformers`.
+* **`--batch-size`**: Number of chunks to process per batch. Default is `32`.
+
+### SpaCy Comparison (`compare_spacy.py`)
+Benchmarks the Minerva MLP model against the standard SpaCy Italian model (`it_core_news_lg`).
+
+**Syntax:**
+```bash
+python compare_spacy.py --split [SPLIT] --batch-size [SIZE]
+```
+
+**Arguments:**
+* **`--split`**: The dataset split for comparison. Default is `test`.
+* **`--batch-size`**: Batch size specifically for the Minerva inference part. Default is `32`.
+
+### Metrics Reported
+Both benchmark scripts output the following metrics:
+* **Accuracy, Precision, Recall, and F1 Score**: Standard quality metrics for boundary detection.
+* **Total Inference Time**: The total time taken to process the chosen split.
+* **Avg Time per Chunk**: The average processing speed in milliseconds (ms) per text segment.omparison with SpaCy's `it_core_news_lg` model to benchmark accuracy and speed.
 
