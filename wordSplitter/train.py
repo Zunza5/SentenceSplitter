@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+import functools
 
 from wordSplitter.data import get_dataloader, MODEL_NAME, WordSplitDataset, collate_fn
 from wordSplitter.embeddings import (
@@ -27,8 +28,13 @@ CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 
 # ── Cached Embedding Dataset ─────────────────────────────────────────────────
 
+@functools.lru_cache(maxsize=128)
+def _load_batch_file(file_path: Path):
+    return torch.load(file_path, weights_only=True, mmap=True)
+
+
 class CachedEmbeddingDataset(Dataset):
-    """Loads pre-extracted character embeddings from disk."""
+    """Loads pre-extracted character embeddings from disk lazily."""
 
     def __init__(self, cache_path: Path):
         self.files = sorted(cache_path.glob("batch_*.pt"))
@@ -38,26 +44,33 @@ class CachedEmbeddingDataset(Dataset):
                 "Run Phase 1 (extract_embeddings) first."
             )
 
-        # Flatten all batches into individual samples
-        self.samples = []
+        self.index_map = []
         for f in self.files:
             data = torch.load(f, weights_only=True)
             batch_size = data["char_embeddings"].shape[0]
             for i in range(batch_size):
-                mask = data["char_mask"][i]
-                sample = {
-                    "char_embeddings": data["char_embeddings"][i][mask],
-                    "char_labels": data["char_labels"][i][mask],
-                }
-                if "spaceless" in data:
-                    sample["spaceless"] = data["spaceless"][i]
-                self.samples.append(sample)
+                self.index_map.append((f, i))
+            del data
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.index_map)
 
     def __getitem__(self, idx):
-        return self.samples[idx]
+        file_path, inner_idx = self.index_map[idx]
+        data = _load_batch_file(file_path)
+        
+        mask = data["char_mask"][inner_idx]
+        sample = {
+            "char_embeddings": data["char_embeddings"][inner_idx][mask],
+            "char_labels": data["char_labels"][inner_idx][mask],
+        }
+        if "spaceless" in data:
+            if isinstance(data["spaceless"], list) or isinstance(data["spaceless"], tuple):
+                sample["spaceless"] = data["spaceless"][inner_idx]
+            else:
+                sample["spaceless"] = data["spaceless"]
+                
+        return sample
 
 
 def cached_collate_fn(batch):
@@ -153,14 +166,15 @@ def train_mlp(
         batch_size=batch_size,
         shuffle=True,
         collate_fn=cached_collate_fn,
-        num_workers=0,
+        num_workers=4,
+        pin_memory=True,
     )
     dev_loader = DataLoader(
         dev_ds,
         batch_size=batch_size,
         shuffle=False,
         collate_fn=cached_collate_fn,
-        num_workers=0,
+        num_workers=2,
     )
 
     print(f"Train samples: {len(train_ds)}, Dev samples: {len(dev_ds)}")

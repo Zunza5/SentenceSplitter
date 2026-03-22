@@ -25,7 +25,7 @@ import re
 from wordSplitter.embeddings import MODEL_NAME
 
 # Reusing UD_URLS and CACHE_DIR from data.py
-from wordSplitter.data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu
+from wordSplitter.data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu, get_sentences_for_split
 
 
 def chunk_sentences(sentences: list[list[str]], chunk_size: int = 5) -> list[list[list[str]]]:
@@ -168,11 +168,8 @@ class SentenceSplitDataset(Dataset):
         augment_prob: float = 0.0,
         augmentation_mode: str = "original", # "original", "augmented", "both"
     ):
-        assert split in UD_URLS, f"Invalid split: {split}"
-
-        # Load and parse UD data using data.py's functions
-        path = download_ud_file(split)
-        self.sentences = parse_conllu(path)
+        # Load and parse using centralized helper (prioritizes local .sent_split)
+        self.sentences = get_sentences_for_split(split)
 
         if split == "engTrain":
             self.sentences = self.sentences[:2773]

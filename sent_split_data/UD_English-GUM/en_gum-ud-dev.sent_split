@@ -1,0 +1,2649 @@
+Introduction<EOS> 
+
+Research on adult-learned second language (L2) has provided considerable insight
+into the neurocognitive mechanisms underlying the learning and processing of L2
+grammar [1]–[11].<EOS> Of interest here, studies suggest that, despite the
+difficulties in acquiring L2 grammar, adult learners can approximate native-like
+levels of use and neurocognitive processing [12]–[15].<EOS> However, it is not enough
+to have attained such native-like levels.<EOS> Crucially, it is also desirable to
+retain them, even in the absence of continued practice or exposure to the L2.<EOS> In
+fact, substantial periods (months to years) of limited or no exposure following
+L2 training are not uncommon, and may even be the norm [16].<EOS> Such a scenario may
+be found in different situations, including when one studies a language in a
+classroom and then stops taking classes [17], [18] and when one is immersed in a
+foreign language setting and then moves away [19].<EOS> In the present study, we
+examine the outcomes of such a period of no exposure on the neurocognition of L2
+grammar: that is, whether a substantial period of no exposure leads to decreased
+proficiency and/or less native-like neural processes (“use it or lose it” [20]),
+no such changes, or perhaps whether even higher proficiency and/or more
+native-like processing may be observed.<EOS> Additionally, we test whether any such
+outcomes might vary as a function of the type of L2 training, in particular
+between classroom-like and immersion-like contexts.<EOS> 
+
+Previous Research<EOS> 
+
+We are aware of six studies designed to investigate the effects of a substantial
+period of limited exposure following adult L2 training [17], [18], [21]–[24],
+all of which were restricted to the examination of behavioral (performance)
+outcomes.<EOS> (Note that we do not consider case studies, purely observational data,
+or research on L2s acquired by children; for a comprehensive review, see [16]).<EOS>
+The six studies tested L2 learners after periods of 1 month to 50 years of
+limited L2 exposure, mainly on general language skills [17], [18], [21], [23],
+[24], though also on more specific paradigms meant to target aspects of
+grammatical abilities [17], [18] or lexical abilities [22], [23].<EOS> These language
+measures were compared in most studies to the same measures in a different set
+of subjects who had not experienced a period of limited exposure [17], [18],
+[22], [23], or to retrospective ratings of the same subjects [21], with only one
+longitudinal study testing the same subjects before and after a period of
+limited exposure [24].<EOS> Across the studies, the periods of limited exposure
+followed either classroom training [17], [18], [22], [24] or mixed classroom and
+immersion training [21], [23], [24].<EOS> The training lasted varying lengths of
+time, apparently usually in the range of a few years, and resulted in seemingly
+varying proficiency levels (though not directly measured, except by [24]) prior
+to the period of limited exposure.<EOS> 
+
+Overall, the results of the six studies have been taken to suggest the
+following.<EOS> A period of limited exposure generally leads to attrition (loss) of
+L2 performance or knowledge [17], [18], [21], [23].<EOS> Such loss has been observed
+after as little as a few months of limited exposure, e.g., after a 1-7 month
+[23] or 6 month delay [21], as well as after 2 years [18], though in one case it
+was observed only by 3-5 years, and not earlier [17].<EOS> Although attrition may
+take place within the first few years, some studies suggest that it then appears
+to level off, with no further losses occurring [17], [18].<EOS> Higher levels of
+proficiency (or exposure) may be associated with less attrition [17], [18],
+[21], [23] or even with no observed losses [21].<EOS> Moreover, one study found no
+changes at all in performance, across proficiency levels, after either 2 or 4
+years of limited exposure [22].<EOS> Finally, in some cases a gain in performance has
+been observed: after 1.5 years of limited exposure in one study, particularly
+for L2 learners with immersion as well as classroom training [24], and in
+another study after 2 years, though only for some abilities, such as listening
+and reading comprehension [18].<EOS> It remains unclear what might explain such
+gains, which have been attributed to motivation and to L2 experience during the
+period of ostensibly limited exposure [24], or to factors related to general
+maturation, cognitive development, or continued academic training [18].<EOS> 
+
+Digital Humanities Clinics -<EOS> Leading Dutch Librarians into DH<EOS> 
+
+Michiel Cock m.p.cock@vu.nl Vrije Universiteit Amsterdam, the Netherlands<EOS> Lotte
+Wilms lotte.wilms@kb.nl National Library of the Netherlands, the Netherlands<EOS> 
+
+In 2015, an initiative was started to set up a Dutch speaking DH+Lib community
+in the Netherlands and Belgium, based on the example of the American communal
+space of librarians, archivists, LIS graduate students, and information
+specialists to discuss topics ‘Where the Digital Humanities and Libraries meet’.<EOS>
+At the initial meeting it became apparent that most participants were there to
+learn more about digital humanities and were not (yet) in the situation where
+they were able to offer expertise on the subject.<EOS> On the administrative level,
+the directors of the libraries participating in the consortium of Dutch academic
+libraries (UKB) also expressed the wish that librarians become more fluent in
+DH.<EOS> 
+
+A year later, the National Library of the Netherlands (Koninklijke Bibliotheek),
+and the University Library of the Vrije Universiteit Amsterdam again concluded
+that librarians at their institutes who wanted to get involved in DH needed more
+training to adequately support researchers and students in this field.<EOS> Therefore
+both institutes joined forces to develop a set of clinics on DH for librarians.<EOS>
+The two institutes were later joined by the Leiden University Libraries.<EOS> We see
+this as the ideal opportunity to provide these educative sessions not only to
+our own librarians, but also to the academic librarians of other Dutch research
+libraries.<EOS> In essence, we want to teach our country’s librarians the ins and
+outs of DH in order for them to take up their natural role of facilitating and
+supporting research and ideally become the research partner needed in DH
+projects.<EOS> 
+
+The aim of these clinics is to provide basic methodological competencies and
+technical skills in DH, for a diverse group of librarians, consisting of both
+subject and technical librarians with basic technical skills.<EOS> The content of
+these sessions should enable them to provide services to researchers and
+students, identify remaining gaps in knowledge or skills that they could address
+by self-directed learning and (perhaps) to automate their daily library work.<EOS> We
+are not setting out to turn them into programmers or data crunchers, but want to
+boost their knowledge level to where they feel comfortable providing information
+about DH projects, follow the literature and research, follow online tutorials
+and hopefully take up the challenge of finishing this professional development
+by engaging with the DH community.<EOS> 
+
+In order to design this curriculum we follow a four step approach with a Working
+Out Loud-principle (Williams, 2010):<EOS> 
+
+Desk research about what being a DH librarian entails (e.g. Hartsell-Gundy et
+al., 2015; Mulligan, 2016; also see the Zotero library of the LIBER Digital
+Humanities working group);<EOS> 
+
+Identify possible subjects, based on experience, a comparison of existing
+teaching material related to DH (e.g. The Programming Historian, the Digital
+Scholarship Training Programme at the British Library and Columbia University's
+Developing Librarian project) and the TaDiRAH taxonomy of research activities;<EOS> 
+
+Get feedback from researchers on possible subjects, based on the knowledge and
+skills they feel librarians need;<EOS> 
+
+Get feedback from librarians on possible subjects, based on already known gaps
+in their knowledge and skills.<EOS> 
+
+With these in hand, we will design the curriculum of clinics, based on the
+method of 'constructive alignment' (Biggs et al., 2011), to make sure that the
+intended learning objectives and the teaching/learning activities stay aligned.<EOS>
+
+Our plan is to organize a maximum of 6 clinics, each one full day.<EOS> Each day
+starts with one or more lectures by researchers, that address the conceptual
+knowledge needed.<EOS> The afternoon sessions will be devoted to the hands-on
+training of skills, following the Library Carpentry model as closely as
+possible.<EOS> By having researchers provide the lecture sessions, we hope to fuel
+the enthusiasm of the librarians with the inspiration of direct contact with
+researchers and to provide access to a network within and across universities.<EOS>
+With these clinics, we hope to initiate a stream of DH activities in Dutch
+universities, making access to support easier for new digital scholars.<EOS> 
+
+The poster at DH2017 will present the curriculum, its position in the
+international context and offer the lessons learned from both the design process
+and the first clinics.<EOS> We welcome discussion about our efforts and the
+possibilities of applying this in other contexts.<EOS> 
+
+Education and early loves<EOS> 
+
+Byron received his early formal education at Aberdeen Grammar School, and in
+August 1799 entered the school of Dr. William Glennie, in Dulwich. [17]<EOS> Placed
+under the care of a Dr. Bailey, he was encouraged to exercise in moderation but
+not restrain himself from "violent" bouts in an attempt to overcompensate for
+his deformed foot.<EOS> His mother interfered with his studies, often withdrawing him
+from school, with the result that he lacked discipline and his classical studies
+were neglected.<EOS> 
+
+In 1801, he was sent to Harrow, where he remained until July 1805. [6]<EOS> An
+undistinguished student and an unskilled cricketer, he did represent the school
+during the very first Eton v Harrow cricket match at Lord's in 1805. [19]<EOS> 
+
+His lack of moderation was not restricted to physical exercise.<EOS> Byron fell in
+love with Mary Chaworth, whom he met while at school, [6] and she was the reason
+he refused to return to Harrow in September 1803.<EOS> His mother wrote, "He has no
+indisposition that I know of but love, desperate love, the worst of all maladies
+in my opinion. In short, the boy is distractedly in love with Miss Chaworth."
+[6]<EOS> In Byron's later memoirs, "Mary Chaworth is portrayed as the first object of
+his adult sexual feelings." [20]<EOS> 
+
+Byron finally returned in January 1804, [6] to a more settled period which saw
+the formation of a circle of emotional involvements with other Harrow boys,
+which he recalled with great vividness: "My school friendships were with me
+passions (for I was always violent)." [21]<EOS> The most enduring of those was with
+John FitzGibbon, 2nd Earl of Clare — four years Byron's junior — whom he was to
+meet unexpectedly many years later in Italy (1821). [22]<EOS> His nostalgic poems
+about his Harrow friendships, Childish Recollections (1806), express a prescient
+"consciousness of sexual differences that may in the end make England untenable
+to him." [23]<EOS> Letters to Byron in the John Murray archive contain evidence of a
+previously unremarked if short-lived romantic relationship with a younger boy at
+Harrow, John Thomas Claridge.<EOS> 
+
+John FitzGibbon, 2nd Earl of Clare<EOS> 
+
+Ah!<EOS> Sure some stronger impulse vibrates here, Which whispers friendship will be
+doubly dear To one, who thus for kindred hearts must roam, And seek abroad, the
+love denied at home.<EOS> 
+
+The following autumn, he went up to Trinity College, Cambridge, [24] where he
+met and formed a close friendship with the younger John Edleston.<EOS> About his
+"protégé" he wrote, "He has been my almost constant associate since October,
+1805, when I entered Trinity College. His voice first attracted my attention,
+his countenance fixed it, and his manners attached me to him for ever."<EOS> In his
+memory Byron composed Thyrza, a series of elegies. [25]<EOS> In later years, he
+described the affair as "a violent, though pure love and passion".<EOS> This
+statement, however, needs to be read in the context of hardening public
+attitudes toward homosexuality in England and the severe sanctions (including
+public hanging) against convicted or even suspected offenders. [26]<EOS> The liaison,
+on the other hand, may well have been "pure" out of respect for Edleston's
+innocence, in contrast to the (probably) more sexually overt relations
+experienced at Harrow School. [27]<EOS> 
+
+Byron spent three years at Trinity College, engaging in sexual escapades,
+boxing, horse riding and gambling. [28]<EOS> Also while at Cambridge he formed
+lifelong friendships with men such as John Cam Hobhouse, who initiated him into
+the Cambridge Whig Club, which endorsed liberal politics, [28] and Francis
+Hodgson, a Fellow at King's College, with whom he corresponded on literary and
+other matters until the end of his life.<EOS> 
+
+Emperor Norton<EOS> 
+
+Joshua Abraham Norton (c. 1818 – January 8, 1880), known as Emperor Norton, was
+a citizen of San Francisco, California, who in 1859 proclaimed himself "Norton
+I, Emperor of the United States".<EOS> He later expanded his pretense by claiming to
+be "Protector of Mexico" as well.<EOS> 
+
+Born in England, Norton spent most of his early life in South Africa.<EOS> After the
+death of his mother in 1846 and his father in 1848, he sailed west, arriving in
+San Francisco possibly in November 1849.<EOS> Norton initially made a living as a
+businessman, but he lost his fortune investing in Peruvian rice.<EOS> 
+
+After he lost a lawsuit in which he tried to void his rice contract, Norton's
+public prominence faded.<EOS> He reemerged in September 1859, laying claim to the
+position of Emperor of the United States.<EOS> He had no political power, and his
+influence extended only so far as he was humored by those around him;<EOS>
+nevertheless, he was treated deferentially in San Francisco, and currency issued
+in his name was honored in the establishments he frequented.<EOS> 
+
+Though some considered him insane or eccentric, citizens of San Francisco
+celebrated his regal presence and his proclamations, such as his order that the
+United States Congress be dissolved by force and his numerous decrees calling
+for a bridge connecting San Francisco to Oakland, and a corresponding tunnel to
+be built under San Francisco Bay.<EOS> Long after his death, similar structures were
+built in the form of the San Francisco – Oakland Bay Bridge and the Transbay
+Tube, and there have been campaigns to rename the bridge "The Emperor Norton
+Bridge".<EOS> 
+
+On January 8, 1880, Norton collapsed at the corner of California and Dupont (now
+Grant) streets and died before he could be given medical treatment.<EOS> Nearly
+30,000 people packed the streets of San Francisco to pay him homage at his
+funeral.<EOS> Norton has been immortalized as the basis of characters in the
+literature of writers Mark Twain, Robert Louis Stevenson, Christopher Moore,
+Morris and Goscinny, Selma Lagerlöf, and Neil Gaiman.<EOS> 
+
+Norton I, Emperor of the United States, photograph, c. 1871 – 72<EOS> 
+
+Declares himself emperor<EOS> 
+
+Emperor Joshua Norton, in full military regalia, circa 1880 or earlier<EOS> 
+
+By 1859, Norton had become completely disgruntled with what he considered the
+inadequacies of the legal and political structures of the United States.<EOS> On
+September 17, 1859, he took matters into his own hands and distributed letters
+to the various newspapers in the city, proclaiming himself "Emperor of these
+United States":<EOS> 
+
+At the peremptory request and desire of a large majority of the citizens of
+these United States, I, Joshua Norton, formerly of Algoa Bay, Cape of Good Hope,
+and now for the last 9 years and 10 months past of S. F., Cal., declare and
+proclaim myself Emperor of these U. S.;<EOS> and in virtue of the authority thereby
+in me vested, do hereby order and direct the representatives of the different
+States of the Union to assemble in Musical Hall, of this city, on the 1st day of
+Feb. next, then and there to make such alterations in the existing laws of the
+Union as may ameliorate the evils under which the country is laboring, and
+thereby cause confidence to exist, both at home and abroad, in our stability and
+integrity.<EOS> 
+
+— NORTON I, Emperor of the United States.<EOS> 
+
+The announcement was first reprinted for humorous effect by the editor of the
+San Francisco Bulletin.<EOS> Norton would later add "Protector of Mexico" to this
+title.<EOS> Thus commenced his unprecedented and whimsical 21-year "reign" over
+America.<EOS> 
+
+One of Norton's undated proclamations<EOS> 
+
+In his self-appointed role of emperor, Norton issued numerous decrees on matters
+of the state.<EOS> After assuming absolute control over the country, he saw no
+further need for a legislature, and on October 12, 1859, he issued a decree
+formally abolishing the United States Congress.<EOS> In it, Norton observed:<EOS> 
+
+... fraud and corruption prevent a fair and proper expression of the public
+voice;<EOS> that open violation of the laws are constantly occurring, caused by mobs,
+parties, factions and undue influence of political sects;<EOS> that the citizen has
+not that protection of person and property which he is entitled.<EOS> 
+
+Norton ordered all interested parties to assemble at Platt's Music Hall in San
+Francisco in February 1860 to "remedy the evil complained of".<EOS> 
+
+In an imperial decree the following month, Norton summoned the Army to depose
+the elected officials of the U.S. Congress:<EOS> 
+
+WHEREAS, a body of men calling themselves the National Congress are now in
+session in Washington City, in violation of our Imperial edict of the 12th of
+October last, declaring the said Congress abolished;<EOS> 
+
+WHEREAS, it is necessary for the repose of our Empire that the said decree
+should be strictly complied with;<EOS> 
+
+NOW, THEREFORE, we do hereby Order and Direct Major-General Scott, the
+Command-in-Chief of our Armies, immediately upon receipt of this, our Decree, to
+proceed with a suitable force and clear the Halls of Congress.<EOS> 
+
+What'd you do Sabrina?<EOS> 
+
+Nothing.<EOS> I left the phone in my bedroom last night, and so I'm grounded from the
+phone.<EOS> It was an accident.<EOS> 
+
+You guys are always in trouble.<EOS> What's up with that?<EOS> 
+
+Mom's a bitch.<EOS> 
+
+Get your feet off of there.<EOS> Get your feet off of there.<EOS> 
+
+You're so stupid thinking I spent the night.<EOS> I came home last night and told
+you.<EOS> 
+
+Kendra, just let it go.<EOS> 
+
+You —<EOS> 
+
+No, because she doesn't —<EOS> 
+
+All you said last night was —<EOS> 
+
+She thinks I spent the night in my jeans —<EOS> 
+
+Kim wasn't staying the night.<EOS> 
+
+If I did spend the night, and I was trying to lie, I would give up, cause then I
+wouldn't care, cause I knew I deserved it.<EOS> But I didn't spend the night, and I
+don't deserve this.<EOS> Kim couldn't spend the night, I told you.<EOS> She could, but
+then af- — I wanted to stay at the game longer.<EOS> And her mom wanted to take her
+home early, and I'm like, no let's stay longer.<EOS> But her mom wouldn't let her.<EOS>
+And so she went home and, I was like, I'll call you when I get home, and then
+you come over.<EOS> And she goes, no just spend the night.<EOS> We'll do this some other
+weekend.<EOS> Okay cool, cause she had to go bowling in the morning.<EOS> Talk to
+Melanie's mom.<EOS> Her mom would know.<EOS> I'll have Melanie call you.<EOS> 
+
+Oh.<EOS> 
+
+Her mom call you —<EOS> 
+
+Right, right.<EOS> 
+
+Her mom wouldn't lie.<EOS> 
+
+Right, Melanie will call me to confirm your lie.<EOS> 
+
+Melanie lies but —<EOS> 
+
+You'll get a hold of her first.<EOS> I know how that works.<EOS> 
+
+No, Melanie's mom.<EOS> 
+
+I thought Melanie didn't have a phone.<EOS> But I'm supposed to call Melanie's mom.<EOS> 
+
+I didn't want you to have her phone number.<EOS> 
+
+Yeah, another lie.<EOS> Remember?<EOS> 
+
+That was a long time ago.<EOS> 
+
+Now I'm supposed to re- —<EOS> A- and I'm supposed to trust you every time you tell
+the truth.<EOS> But how am I supposed to know when you're telling the truth?<EOS> 
+
+That was a joke.<EOS> That was a joke.<EOS> 
+
+Yeah, and I'm supposed to read your mind and know what you're joking about.<EOS> 
+
+No but, it was a joke.<EOS> 
+
+You know Kendra, y- — I don't know how many times I gotta tell you, once you
+lie, once you lie —<EOS> 
+
+Are they having a carwash?<EOS> 
+
+You lose th- complete trust.<EOS> 
+
+No.<EOS> 
+
+Yeah they are.<EOS> 
+
+Yeah that's what it is a —<EOS> 
+
+We should have a carwash there.<EOS> 
+
+Carwash and a bakesale.<EOS> They're not getting any people though.<EOS> 
+
+Mm.<EOS> Hot out.<EOS> 
+
+What's that supposed to be?<EOS> They're making it into something.<EOS> 
+
+You're not going anywhere for a while.<EOS> 
+
+It's a bookstore.<EOS> 
+
+Really?<EOS> 
+
+God, I didn't spend the night, that's what makes me so mad, I'm grounded for
+nothing.<EOS> I was home all night last night, I came home and told you.<EOS> And even my
+cuffs and everything's on my bed.<EOS> So stupid.<EOS> Next time if I leave in the
+morning, I'll wake you up.<EOS> Mom I'm awake now, I'm leaving.<EOS> 
+
+Well you woke me up last night, to tell me Kim wasn't spending the night.<EOS> I
+don't know why you couldn't wake me up in the morning, to tell me that you were
+going.<EOS> You guys wake me up every time I'm trying to take a little nap.<EOS> 
+
+What if we are awake?<EOS> I was tired this morning.<EOS> So much fun.<EOS> My hair looks like
+a mess.<EOS> I left it in a ponytail, I didn't even have time to take a shower.<EOS> I
+think if I spent the night I would've took a shower.<EOS> All I need is your
+signature so I can play the volleyball.<EOS> On the volleyball team.<EOS> 
+
+No.<EOS> No.<EOS> 
+
+Why?<EOS> It's just volleyball.<EOS> It's f- like on Saturdays and Wednesdays.<EOS> It's for
+church.<EOS> It's fun.<EOS> 
+
+You have practice every Wednesday.<EOS> 
+
+Yeah but, not at uh —<EOS> This is at six thirty.<EOS> 
+
+I don't care.<EOS> 
+
+And Susan's going to it too.<EOS> 
+
+Mm.<EOS> Who cut the grass?<EOS> 
+
+Marlena did it.<EOS> 
+
+Marlena did it a long time ago, but it hasn't been watered.<EOS> It's dying.<EOS> 
+
+I know.<EOS> 
+
+Gonna rip your purse.<EOS> 
+
+I know.<EOS> 
+
+See if I spent the night mom, you'd think I'd still be in my uniform?<EOS> 
+
+I know she's —<EOS> J- she —<EOS> See now she's trying to think of ways to cover her
+tracks.<EOS> I know what you're doing.<EOS> Seen this before.<EOS> 
+
+I'm hungry.<EOS> 
+
+Shit.<EOS> 
+
+I love your jeans.<EOS> 
+
+Cause I wanted to go to the bathroom when you're done.<EOS> 
+
+Anyways, they were not.<EOS> 
+
+Did you get a Sawzall?<EOS> 
+
+Yes, it's right here.<EOS> 
+
+Oh.<EOS> 
+
+I got the blades.<EOS> They're right here.<EOS> 
+
+Do you remember the uh, program on TV, about Hantavirus?<EOS> 
+
+About what virus?<EOS> 
+
+Hantavirus.<EOS> 
+
+Hutter?<EOS> What's that about?<EOS> I don't re- – I don't remember.<EOS> 
+
+It's the one from the dead mice.<EOS> 
+
+Oh, yeah.<EOS> Is it, is it all over now?<EOS> Is it for real now?<EOS> Is it in here?<EOS> Is it in
+the United States now?<EOS> 
+
+They said, they already determined it was in like eighteen different states.<EOS> 
+
+What?<EOS> 
+
+So?<EOS> 
+
+The Hantavirus.<EOS> 
+
+What, what are you g- —<EOS> 
+
+Well —<EOS> 
+
+So what're you getting at?<EOS> 
+
+That insulation out there with the mice shit in it?<EOS> 
+
+Did you just wash —<EOS> Yes.<EOS> 
+
+Really bothers me.<EOS> 
+
+I kn- —<EOS> Oh oh I know.<EOS> I mean that's the thing I thought of too.<EOS> 
+
+Well, it's all packed up in garbage bags now.<EOS> I didn't even touch it.<EOS> Used a
+hoe, stuffed it.<EOS> I didn't touch anything.<EOS> Don't touch anything yellow.<EOS> Okay?<EOS> Not
+with your gloves or anything.<EOS> Find something else to pick it up with.<EOS> 
+
+Mhm.<EOS> Did you — did you put it in a trash bag?<EOS> 
+
+I took that brown trash thing, and tucked a bag in it.<EOS> And then I put them in
+there.<EOS> Squashed em down.<EOS> 
+
+We need a —<EOS> Do you have any sharp objects on you?<EOS> 
+
+No.<EOS> Keys?<EOS> 
+
+No I need like a little pin or something.<EOS> You have a pencil?<EOS> 
+
+You have anything in your hair?<EOS> 
+
+No.<EOS> 
+
+Fuck.<EOS> 
+
+What do you have to hit?<EOS> 
+
+See this is the little -<EOS> 
+
+Oh.<EOS> Oh oh.<EOS> 
+
+Cool?<EOS> 
+
+Okay.<EOS> Alright.<EOS> See, it was just slow.<EOS> Okay.<EOS> This is me?<EOS> Is this me?<EOS> 
+
+Yeah.<EOS> Yeah.<EOS> Jennifer.<EOS> 
+
+Oh.<EOS> That's right.<EOS> 
+
+There you go thinking again.<EOS> 
+
+Smart ass.<EOS> Smart ass.<EOS> Alright.<EOS> 
+
+Wow.<EOS> Who took over uh ...<EOS> 
+
+Oh.<EOS> They got North America.<EOS> But not for long.<EOS> Oh, my God.<EOS> 
+
+Oh my God, did you see that?<EOS> 
+
+Because player thr- player three is aggressive, so he's gonna like go for
+everything.<EOS> 
+
+How do you know?<EOS> Did I make him aggressive?<EOS> 
+
+Yeah, you made him aggressive, so, he's gonna like, try to tear everything up
+now.<EOS> Um, that's pretty well, like secure right there, so maybe —<EOS> That's me.<EOS> 
+
+Oh fuck.<EOS> 
+
+Wow, he wiped my ass out.<EOS> 
+
+Ah, you suck.<EOS> Watch this.<EOS> Loser.<EOS> 
+
+What else can we do tomorrow?<EOS> 
+
+Besides go to the movies, t-?<EOS> 
+
+Go out to dinner?<EOS> 
+
+I'm so not hungry right now, it's hard for me to think about food.<EOS> 
+
+Alright.<EOS> 
+
+I'd like to go out to dinner though.<EOS> Think we can find a hot dog?<EOS> 
+
+Yeah, that's a good idea.<EOS> That's an excellent idea.<EOS> 
+
+There you go thinking again again.<EOS> 
+
+There you go thinking again.<EOS> 
+
+I'm gonna whip your butt.<EOS> 
+
+You think so, hunh?<EOS> 
+
+Yeah.<EOS> 
+
+Un-unh.<EOS> That's all I get?<EOS> 
+
+That's me, right?<EOS> 
+
+Yeah you get a percentage of the amount of countries you own, and then, for
+continents you get another set amount.<EOS> 
+
+So can I get something on this bad boy?<EOS> 
+
+Yeah.<EOS> See?<EOS> 
+
+So I hit okay?<EOS> 
+
+Yeah.<EOS> Hit okay.<EOS> 
+
+See you got one of each kind of card.<EOS> 
+
+Excellent.<EOS> Oh okay.<EOS> So I get ...<EOS> 
+
+So you got ten, looks like sixteen.<EOS> 
+
+Sixteen?<EOS> 
+
+Who you gonna trounce on?<EOS> That's you up there, too, right there, you know.<EOS> 
+
+That's me right there, too.<EOS> 
+
+Oh yeah.<EOS> 
+
+Um ...<EOS> 
+
+When w- you take over another person, you take a — you get, their cards.<EOS> 
+
+The MSG in that Chinese food really got me high for a little bit.<EOS> Does MSG
+affect you?<EOS> 
+
+No.<EOS> Not really.<EOS> It affects my mother.<EOS> Gives her headaches.<EOS> 
+
+Are you gonna attack over there?<EOS> 
+
+I don't know.<EOS> Thirteen.<EOS> That leaves me with thirteen.<EOS> I wanna fortify.<EOS> 
+
+You can't move those to there, because they're not touching.<EOS> 
+
+W- w- well that's kind of bogus.<EOS> 
+
+Nun-unh.<EOS> 
+
+Maybe I'll move em right there.<EOS> 
+
+Done.<EOS> 
+
+Done.<EOS> 
+
+Oh fuck.<EOS> 
+
+Oh.<EOS> 
+
+Who's this guy?<EOS> 
+
+Player six.<EOS> 
+
+Yakutsk.<EOS> Look at that.<EOS> See if I have any cards.<EOS> 
+
+Oh, I got a set.<EOS> 
+
+You know what I think, I think the first time that it does the card mode, it
+takes a long time.<EOS> 
+
+Yeah.<EOS> Yeah.<EOS> 
+
+You remember the last time, that's what happened.<EOS> 
+
+Yeah.<EOS> 
+
+You remember?<EOS> 
+
+Yeah.<EOS> 
+
+Look at you being smart.<EOS> 
+
+I'm not smart?<EOS> 
+
+You're stupid.<EOS> 
+
+Don't call me stupid.<EOS> 
+
+Mm.<EOS> Alright.<EOS> 
+
+Look at you with the uh little armies down here.<EOS> 
+
+Big armies.<EOS> 
+
+Trying to — trying to win.<EOS> 
+
+I got big armies, buddy.<EOS> 
+
+Trying to conquer the world.<EOS> 
+
+I'm gonna conquer — I'm gonna conquer you.<EOS> 
+
+Probably.<EOS> 
+
+Ooh.<EOS> He's giving you some problems over there.<EOS> 
+
+He is indeed.<EOS> 
+
+Go for that one.<EOS> Go into Europe.<EOS> Get Europe.<EOS> 
+
+Oops.<EOS> You won't attack me yet.<EOS> I think I'll stop there.<EOS> 
+
+Hmm.<EOS> 
+
+I only have uh, that many cards, so ...<EOS> 
+
+How many cards you have?<EOS> You only have two.<EOS> 
+
+Just two.<EOS> 
+
+So you can't have a set.<EOS> 
+
+When do you get — h- — when do you get cards though?<EOS> I don't understand that.<EOS> 
+
+Every time you take over a country you get cards.<EOS> 
+
+What row?<EOS> 
+
+Attack with the twenty-two.<EOS> Press twenty-two, attack.<EOS> 
+
+Wow.<EOS> 
+
+Look at that.<EOS> 
+
+Oh, see look, you just got all of his cards.<EOS> 
+
+Press okay.<EOS> 
+
+Bonus?<EOS> 
+
+Oh my God.<EOS> Fuck.<EOS> 
+
+Fuck.<EOS> 
+
+Fuck fuck fuck.<EOS> Oh man.<EOS> Look at that.<EOS> Twenty-seven.<EOS> Twenty-nine.<EOS> Th – twenty-one
+two three four five six seven eight.<EOS> Twenty-eight.<EOS> Don't you fucking attack me.<EOS>
+You ass.<EOS> You asshole.<EOS> 
+
+Two — hmm.<EOS> 
+
+I'm tired.<EOS> 
+
+We'll hear argument first this morning in Case 22-506, Biden versus Nebraska.<EOS>
+General Prelogar.<EOS> 
+
+ORAL ARGUMENT OF GEN. ELIZABETH B. PRELOGAR ON BEHALF OF THE PETITIONERS<EOS> 
+
+Mr. Chief Justice, and may it please the Court: COVID-19 is the most devastating
+pandemic in our nation's history and it has caused enormous disruption and
+economic distress.<EOS> Over the past three years, millions of Americans have
+struggled to pay rent, utilities, food, and many have been unable to pay their
+debts.<EOS> To head off immediate harm for student-loan borrowers, two secrataries
+across two administrations invoked the HEROES Act to suspend interest and
+payment obligations for all Americans with federally held loans.<EOS> But, if that
+forbearance ends without further relief, it's undisputed that defaults and
+delinquencies will surge above pre-pandemic levels.<EOS> So Secretary Cardona again
+invoked the HEROES Act to provide a measure of loan forgiveness to ensure that
+this unprecedented pandemic does not leave borrowers worse off in relation to
+their student loans.<EOS> The states ask this Court to deny that vital relief to
+millions of Americans, but they lack standing to seek that result.<EOS> They
+principally assert harm to a separate legal person, MOHELA, that could sue in
+its own name but has chosen not to do so, and the states' asserted harms to
+their tax revenues are self-inflicted and indirect.<EOS> The states' bare
+disagreement with this policy is not the sort of concrete injury that Article
+III demands.<EOS> On the merits, the states say the Act doesn't authorize the
+Secretary to ever forgive loan principal.<EOS> But the Secretary's interpretation of
+this text is not just a plausible reading; it's the best reading.<EOS> Congress
+expressly authorized the Secretary to waive or modify any Title IV provision in
+emergencies to provide financial relief to borrowers.<EOS> Loan forgiveness is a
+paradigmatic form of debt relief, and the Secretary acted within the heartland
+of his authority and in line with the central purpose of the HEROES Act in
+providing that relief here.<EOS> To apply the major questions doctrine to override
+that clear text would deny borrowers critical relief that Congress authorized
+and the Secretary deemed essential.<EOS> I welcome the Court's questions.<EOS> 
+
+General, is this a waiver, or is it a modification?<EOS> 
+
+It's both a waiver and a modification, Justice Thomas.<EOS> This appears at JA 261.<EOS>
+That was the decision document that the Secretary signed where he said, I hereby
+issue waivers and modifications of multiple provisions under Title IV of the
+student loan program.<EOS> And then that language was repeated in the Federal
+Register notice that actually implemented that program and constitutes the final
+agency action that the states are challenging here.<EOS> 
+
+Well, could you explain then -- in -- in -- in other provisions, there is
+express language as to cancellation, and, of course, there isn't here.<EOS> So would
+you take a minute to explain how a waiver or modification amounts to a waiver --
+to a cancellation?<EOS> 
+
+Of course.<EOS> So the Secretary identified various provisions in Title IV that
+govern the terms and conditions of student loans and also govern discharge and
+cancellation in other circumstances, as your question suggested.<EOS> And I think the
+straightforward way to think about how the verbs map onto the Secretary's action
+is that he waived elements of those provisions that contain eligibility
+requirements for discharge and cancellation that are inapplicable under this
+program and then modified the provisions to contain the limitations that he had
+announced as part and parcel of announcing this loan forgiveness.<EOS> Now you had
+suggested that there's no express statement in the HEROES Act to discharge loan
+principal, and that's true, but the relevant and operative language here is the
+provision that says the Secretary is empowered to waive or modify any Title IV
+provision, and so the HEROES Act isn't enumerating any of the various forms of
+relief that have long been authorized and implemented under this statute.<EOS> I
+don't think anything can be read into the fact that there's no express reference
+to particular forms of relief because Congress was trying to broadly cover the
+field and ensure that the Secretary had the tools to respond to the national
+emergency with whatever relief might be necessitated.<EOS> 
+
+But, in an opinion we had a few years ago by Justice Scalia, he talked about
+what the word "modify" means, and he said modified in our view connotes moderate
+change.<EOS> He said it might be good English to say that the French Revolution
+modified the status of the French nobility, but only because there's a figure of
+speech called understatement and a literary device known as sarcasm.<EOS> We're
+talking about half a trillion dollars and 43 million Americans.<EOS> How does that
+fit under the normal understanding of "modifying"?<EOS> 
+
+So, of course, I recognize that in MCI, Justice Scalia's opinion adopted a
+narrower understanding of that term, but I don't read that opinion to set forth
+a universal meaning of "modify, "no matter the statutory context.<EOS> And, here, of
+course, we have a broader phrase, "waive or modify."<EOS> It's undisputed and the
+states aren't contesting that the ordinary meaning of "waive" means to eliminate
+an obligation in its entirety.<EOS> And I think, if you look at that phrase in the
+context of the statute, that means that "modify" has to mean making a change up
+to the point of wholesale elimination.<EOS> It would be really strange for Congress
+to say you can eliminate obligations altogether or tweak them just the littlest
+bit, but you can't do anything in between.<EOS> 
+
+Well, but it's "waive "particular regulatory or statutory provisions.<EOS> 
+
+That's right.<EOS> 
+
+That to me suggests a much more focused use of the word.<EOS> 
+
+Well, it's "waive or modify" paired with the authority to do that with respect
+to any Title IV provision.<EOS> So I think that that is the –<EOS> 
+
+It doesn't say waive -- modify or waive loan balances.<EOS> 
+
+Good morning to all.<EOS> In the case of Atlantic Lottery Corporation, Inc. et al.
+against Douglas Babstock et al., for the appellant, Atlantic Lottery
+Corporation, Inc.: Julie Rosenthal, Mike Eizenga, Sarah Stoddar- Stoddart, I'm
+sorry, Jonathan Bell. […]<EOS> For the intervener, British Columbia Lottery
+Corporation: K. Michael Stevens, Shannon Ramsey, and Aubin Calvert.<EOS> For the
+respondents, Douglas Babstock et al.: Kirk M. Bart and Celeste Pollock.<EOS> Miss
+Rosenthal?<EOS> 
+
+Thank you.<EOS> To give you a sense of how we're dividing our argument, I will be
+addressing the issue of waiver of tort, the new cause of action, we say, of
+disgorgement for wrongdoing.<EOS> My colleague, Mr. Eizenga, will address the
+Criminal Code issue and unjust enrichment.<EOS> And Mr. Kelly, who acts for the
+remaining appellants, will address the requirement that any order of
+disgorgement of profits must be limited to those profits that result from, or
+that are causally linked to the breach of contract or other wrongdoing at issue.<EOS>
+And we have agreed to divide our time 20 20 20.<EOS> And I wish to start by
+clarifying a point of terminology, and it relates to the use of the term waiver
+of tort.<EOS> And the reason I wish to clarify it is that you will hear the
+respondent's counsel say waiver of tort is nothing new, that it's an old cause
+of action.<EOS> And therefore what the Newfoundland and Labrador Court of Appeal did
+is -- is nothing out of the ordinary.<EOS> But what I say that argument obscures is
+the fact that waiver of tort can be used in two quite different ways, and t- to
+refer to two different concepts.<EOS> The first is, it may refer to an old, old
+common law concept, a construct that would allow a plaintiff to obtain a gains
+based remedy but for a completed cause of action, and traditionally it was uh
+applied with respect to two causes of action, in particular proprietary causes
+of action and trespass or conversion.<EOS> But what I wish to emphasize is that that
+old construct was applied where the plaintiff could prove a completed cause of
+action.<EOS> It remains an open question whether that construct should be expanded to
+allow for gains-based remedies for other types of claims.<EOS> 
+
+This is this is your case to plead, but you have dived headlong into the weeds.<EOS>
+You have not told us what our task is here today.<EOS> Now that's up to you, whether
+you want to frame it in a more general sense or not.<EOS> But it would assist me, at
+least in terms of what it is, in a general sense, we're being asked to decide
+today.<EOS> 
+
+So what I am asking you to decide today is the second -- relates to the second,
+and what I say is the new and much narrower meaning of of waiver of tort, which
+is what the Newfoundland and Labrador Court of Appeal did, which is to say there
+exists a cause of action that comprises a breach of a duty of care without
+causally linked loss or injury.<EOS> And that, I say, is very new.<EOS> It was first
+suggested by the Ontario courts back in Sirhan, and it's the Newfoundland and
+Labrador Court of Appeal that, for the first time has affirmatively recognized
+that as a cause of action.<EOS> And what I would ask this court to do is to clarify,
+to correct that error and say that there is no such cause of action.<EOS> 
+
+I take it this is a motion to strike.<EOS> That's what I mean by general
+propositions.<EOS> 
+
+It arose at first instance on a motion to strike.<EOS> Correct.<EOS> 
+
+And so I have -- there are really two main reasons I say why the proposed cause
+of action should be definitively ruled by this court, not to be sound at law.<EOS>
+And the first is really a doctrinal point, which is that it is fundamentally at
+odds with the law of negligence.<EOS> And the second is that even on its own terms,
+it lacks internal coherence and is impermissibly vague, I say, and unworkable.<EOS>
+And for those reasons, the commentators have opposed it.<EOS> It would put -- no
+other common law jurisdiction has even considered such a cause of action.<EOS> And
+fundamentally, I say it doesn't answer any unmet societal need.<EOS> So turning to
+the first point, which is the the incompatibility with the law of negligence,
+that law, of course, has been settled for close to 100 years, and it couldn't be
+clearer that breach of a duty of care without loss or injury does not give rise
+to a cause of action.<EOS> That's set out in Moran and Pyle.<EOS> If needed, that's in my
+condensed book at Tab 3.<EOS> And what I wish to emphasize is that this court has
+made it abundantly clear that careless behavior alone is not wrongful.<EOS> It is
+only the loss or injury that makes it wrongful.<EOS> And if I could direct the
+court's attention, please, to Tab 4 of our condensed book.<EOS> This is the decision
+in Ratych and Bloomer.<EOS> Reading from line E a quote from Lord Diplock and
+Browning and War Office:<EOS> 
+
+"A person who acts without reasonable care does no wrong in law.<EOS> He commits no
+tort.<EOS> He only does wrong, he only commits a tort, if his lack of care causes
+damage to the plaintiff."<EOS> And the same point is made in Clements and Clements
+over at Tab 8, please.<EOS> At paragraph 16.<EOS> 
+
+"A defendant in an action in negligence is not a wrongdoer at large.<EOS> He is a
+wrongdoer only in respect of the damage which he actually causes to the
+plaintiff."<EOS> And this point is particularly important because the proposed cause
+of action is said to be disgorgement for wrongdoing.<EOS> And I say the court below
+proceeded on the basis that carelessness, failure to meet the standard of care,
+was wrongdoing.<EOS> But that is is exactly the opposite to what the law of
+negligence has told us.<EOS> 
+
+To Feel Happier, We Have to Resolve to the Life We Evolved to Live<EOS> 
+
+By Arash Javanbakht<EOS> 
+
+#science #health #advice #food #research #history<EOS> 
+
+When humans had to hunt for food, they had to move more.<EOS> Sedentary lifestyles
+have made humans far less active than they need to be.<EOS> “Hunting Wooly Mammoth”
+by http://cloudinary.com is licensed under CC BY-SA 4.0<EOS> 
+
+When we have to give a talk to a group of people, we feel anxious and experience
+the bodily fear responses that do not make sense now: The system is not meant to
+function in this safe context.<EOS> 
+
+As a psychiatrist specialized in anxiety and trauma, I often tell my patients
+and students that to understand how fear works in us, we have to see it in the
+context where it evolved.<EOS> Ten thousand years ago, if another human frowned at
+us, chances were high one of us would be dead in a couple minutes.<EOS> In the tribal
+life of our ancestors, if other tribe members did not like you, you would be
+dead, or exiled and dead.<EOS> 
+
+Biological evolution is very slow, but civilization, culture, society and
+technology evolve relatively fast.<EOS> It takes around a million years for
+evolutionary change to happen in a species, and people have been around for
+about 200,000 years.<EOS> Each of us, however, sees drastic changes in our lifestyle
+and environment over a matter of a few years.<EOS> 
+
+Let’s compare the life for which this body and brain has evolved with the life
+we live, from my perspective as a scientist and a physician.<EOS> 
+
+What we eat<EOS> 
+
+We evolved in a context of scarcity, and had to walk or run for miles and
+scavenge to find food; we had to work for it.<EOS> When we ate, we did not know when
+the next time would be.<EOS> When we had it, we were better off eating the
+high-calorie food that increased our chance of survival when hungry (greasy food
+feels appealing).<EOS> Food was not quick to digest, stomachs also had to work hard
+for it: meat, fruits, vegetables, seeds and nuts.<EOS> None of these contained “easy”
+sugary calories.<EOS> The body that was prone to starvation, evolved to eat it all
+when available, and store it, and be stingy in its use.<EOS> 
+
+But now, food is just a few feet away, and we can easily consume thousands of
+calories in one serving.<EOS> Fatty food, which required days and miles of hunting
+and scavenging to acquire, is now right there in the fridge or at the
+McDonald's.<EOS> It is like giving full fridge privileges to your Labrador.<EOS> Easy
+calories like soda and candies provide a very large amount of energy in a very
+short amount of time and confuse the whole system.<EOS> We end up fat and fatigued.<EOS> 
+
+How we move<EOS> 
+
+Our ancestors had to be active to survive in the wild.<EOS> They had to walk miles a
+day, and were frequently involved in high intensity physical activity: moving
+heavy objects, climbing, fighting, chasing a prey or fleeing predators.<EOS> 
+
+This body did not evolve to sit at a desk eight hours a day, and then lie on a
+couch for the rest of the day munching on high calorie food, looking at a small
+or large screen.<EOS> A contemporary American may only walk a few dozen steps to the
+car, drive to work, ride the elevator to the office, walk a few dozen steps back
+to the car, get drive-thru food, then be back on the couch.<EOS> Suboptimal muscle
+use leads to weaker joint support, and weird postures cause pain.<EOS> Pain leads to
+reduced activity, more obesity and weaker muscles; then comes opioid epidemic,
+overuse of pain medications, and back surgeries for all! [...]<EOS> 
+
+What can we do to feel better?<EOS> 
+
+When we adopt a pet, we learn about their normal environment, activity level and
+nutrition.<EOS> Isn’t it interesting that we do not apply that to the animal we live
+in?<EOS> To feel normal, we should live normal, and a human’s normal life is that for
+which she or he has evolved.<EOS> 
+
+So I believe the first step is to understand ourselves, and why we do what we
+do, and desire what we desire.<EOS> When we crave fatty food, or cannot stop eating,
+that is because the human animal had to do so to survive.<EOS> Such understanding
+brings empathy, reduces judgment and helps us get creative.<EOS> 
+
+Keep away the high-calorie sugary food.<EOS> I tell my patients: do not buy it, or if
+you do, buy in small amounts.<EOS> Try to eat what you were evolved to eat.<EOS> Know the
+body is lazy, because it wants to save precious energy.<EOS> The drag of going to the
+gym may be because of that.<EOS> Also know that this body would be much happier when
+it is regularly, and highly active.<EOS> We know that exercise is not only helpful
+for cardiovascular and bodily health, but also reduces anxiety.<EOS> 
+
+I ask all my patients to commit to some level of exercise, as part of their
+treatment plan.<EOS> And it does not have to be treadmill or gym.<EOS> Whatever rocks your
+boat: yoga, boxing, walking, running up the stairs at work, doing 20 push-ups,
+20 sit-ups and 20 squats a day, or dancing to a TV ad; whatever makes your heart
+pound faster.<EOS> Other bonuses come with exercise: getting sun exposure or to know
+your neighbor when walking the dog, making new friends (or a date) at the gym,
+feeling better about yourself, and being more attractive to yourself and others.<EOS>
+All these factors lift your mood.<EOS> Do not feel disappointed if you did not lose
+weight, it’s not the only goal.<EOS> 
+
+Other benefits are abundant and even more important: increased strength and
+energy, cardiovascular and joint health, improved mood, etc.<EOS> When it comes to
+sleep, changing behavior works.<EOS> Here are some tips for better sleep: avoid late
+caffeine, bright screens (including your phone – Facebook can wait), and use
+your bed only for sleep and sex.<EOS> 
+
+Finally, you may need a regular dose of healthy and safe exposure to real-life
+excitement, and a little bit of fear.<EOS> 
+
+Bottom line: If we treated our body the way responsible dog owners treated their
+dog, we would live a much happier life.<EOS> 
+
+Tools and Tasks<EOS> 
+
+By Anonymous<EOS> 
+
+"Andrews clutch job" by Bob n Renee is licensed under CC BY 2.0<EOS> 
+
+My town is losing a car repair shop.<EOS> The gas station at the end of Main Street
+will continue to sell gas, but the garage attached to it is going to close.<EOS> The
+mechanic, who has been there for twenty-five years, will have to find work
+elsewhere.<EOS> He had a loyal following; a friend told me he once opened early on a
+Sunday to fix her tire.<EOS> 
+
+The garage isn’t closing for lack of customers.<EOS> Nor is it closing because of
+taxes, that ritual demon of the political Right.<EOS> A major reason, the owner said,
+is technology, and the way manufacturers are making cars so complex.<EOS> To fix them
+requires sophisticated computers that a small shop can’t afford.<EOS> “There isn’t a
+car from the ’70s or ’80s that we can’t work on,” the owner told our local
+weekly.<EOS> 
+
+“But we’re not in the position to make the investment in all the electronics and
+computers.<EOS> 
+
+To make that transition would be cost prohibitive.”<EOS> 
+
+He’s not the only one.<EOS> Independent repair shops are going out of business all
+over the country.<EOS> In California, more than half the gas stations had repair
+shops as recently as ten years ago.<EOS> Now about 15% of them do.<EOS> Part of that is
+because oil companies are forcing out independent owners and taking over the
+retail end themselves.<EOS> (Have you noticed that prices are rising?)<EOS> But partly too
+it’s because the local shops can’t repair the new computerized cars.<EOS> 
+
+This is a trend that bears more scrutiny than it has received.<EOS> It goes to two of
+the central narratives of our economy — the conventional version at least.<EOS> One
+is that virtue and hard work prevail, which in this case is not the case.<EOS> Hard
+work and virtue have succumbed to corporate contrivance.<EOS> You are shocked?<EOS> 
+
+The other narrative is the one that casts technology as Savior.<EOS> The word itself
+has become practically a synonym for “future.”<EOS> Computers are portrayed as the
+ultimate instruments of democracy.<EOS> They will put knowledge — and therefore power
+— on every desktop.<EOS> They will cause hierarchies and bureaucracies to crumble.<EOS>
+Every man and woman will be a king.<EOS> “While the Industrial Revolution herded
+people into gigantic social institutions — big corporations, big unions, big
+governments,” wrote Newt Gingrich in his book To Renew America, “the Information
+Revolution is breaking up these giants and leading us back to something that is
+— strangely enough — much more like de Tocqueville’s 1830s America.”<EOS> 
+
+Brother Newton is a busy man, and maybe he just didn’t have time to consider the
+complications.<EOS> For one thing, there’s the matter of agency.<EOS> As David Noble
+observed in his book Forces of Production, technology is not an impersonal
+force.<EOS> It does not have an inevitable evolutionary path.<EOS> Technology is a
+projection of those who make it, including corporate interests and proprietary
+claims.<EOS> This can lead to a lot of trouble.<EOS> 
+
+Noble looks in particular at the machine tool industry, and how it evolved to
+enable top-down management control instead of autonomy on the shop floor.<EOS> The
+technology could have gone either way; it was the corporate managers who made
+the call.<EOS> Computers have followed a similar pattern.<EOS> Potentially they can
+liberate the desktop, and sometimes do.<EOS> But in practice they often do the
+opposite.<EOS> Now the boss can monitor your every keystroke.<EOS> At home corporations
+can plant little spies on your machine.<EOS> The Feds can track your personal e-mail
+exchanges.<EOS> You think the Department of Homeland Security might have a computer
+or two?<EOS> 
+
+And so with the technology built into cars.<EOS> It would seem possible to design it
+in a way that made cars simpler and less expensive to repair.<EOS> I don’t really
+know, but it does seem reasonable.<EOS> The problem is, would it fit the business
+plans of the corporations that make the cars?<EOS> Why would General Motors want to
+put more capacity and control into the hands of independent garages like the one
+in my town?<EOS> Wouldn’t it want to lock a customer into its own repair and dealer
+network, much the way computer printer manufacturers try to lock us into their
+expensive cartridges?<EOS> 
+
+That seems to be what’s happening.<EOS> Car repair used to be a knowledge commons,
+shared in driveways, urban curbsides, and voc. ed. classes.<EOS> Get yourself some
+tools and you were ready to go for most routine repairs.<EOS> The machines were open
+to the eye.<EOS> There was little if any secret and proprietary code.<EOS> Repair manuals
+could help with the more technical issues, but you’d probably go to a shop for
+those anyway. [...]<EOS> 
+
+I am not suggesting that we all go back to bamboo huts, though a few weeks might
+not be the worst thing now and then.<EOS> I am just questioning the techno-romantics
+who think technology by its very nature is enlarging and fulfilling.<EOS> Sometimes
+it does the opposite, and hollows us out.<EOS> Adam Smith actually had a glimmer of
+this, regarding the effect of the division of labor upon the workers involved.<EOS>
+As each task becomes more specialized, Smith noted, it engages less of the
+person.<EOS> Narrow work leads to human atrophy; it can make people “as stupid and
+ignorant as it is possible for a human creature to become.”<EOS> (Smith had a
+brooding cautionary side that is lacking among his acolytes today.)<EOS> 
+
+What’s happening now is bigger and more endemic.<EOS> It affects people not just as
+employees but as “consumers” even more (and consumption is the real work of our
+“economy” to begin with.)<EOS> This is a big topic, obviously, but a lot goes back to
+who is devising the technology and why.<EOS> Open technologies and open systems are
+less inclined to the unvirtuous cycle than closed ones are.<EOS> There’s a built-in
+social dimension that engages us at more levels, as producers as well as just
+consumers.<EOS> Open systems evolve to serve the needs of users rather than of those
+who seek to use the users for their own ends.<EOS> Compare, for example, traditional
+fairy tales with the kiddy entertainment today that has embedded products such
+as candy bars and colas.<EOS> 
+
+When someone finally writes the sequel to The Wealth of Nations, open systems
+and decentralized technologies will be, I think, a central theme.<EOS> Perhaps a
+working title could be From the Wealth of Nations to the Well-Being of the
+People Involved.<EOS> 
+
+The Beast<EOS> 
+
+I was thirteen.<EOS> It was spring, the barren time in March when you can not be sure
+if it is really warmer, but you are so desperate for change that you tell
+yourself the mud at the edge of the sidewalk is different from winter mud and
+you are sure that the smell of wet soil has suddenly a bit of the scent of
+summer rains, of grass and drowned earthworms.<EOS> And it has, because it is spring
+and inside the ground something is stirring.<EOS> I was wearing a yellow linen dress
+which my mother had picked out and which I therefore disliked although I knew it
+flattered me.<EOS> My shoes were white and I was concentrating on keeping them out of
+the mud.<EOS> My father and I were going to mass — my mother did not go; she was
+Protestant.<EOS> My father put his hand on top of my hair, his palm on my head, and I
+could feel the bone of my skull and my skin and his hot palm, so dry and strong.<EOS>
+When I was a little girl, he did that often, and called me Muscles.<EOS> He had not
+called me Muscles or put his hand on my head for a long time.<EOS> I could not help
+arching my back a little, I wanted to push against his hand like a cat but the
+instinct that comes with being thirteen, the half-understood caution that makes
+a girl timid, or wild, the shyness told me to just walk.<EOS> I wanted to feel the
+rough edge of the pocket of his coat against my cheek, but I was too tall.<EOS> I
+wanted to be seven again, and safe.<EOS> But I still wanted to push against his hand
+and put my hand in his pocket and steal the leather palmed glove, that secret
+animal.<EOS> 
+
+Instead I went into the church, took a Bulletin, dipped my finger in Holy Water
+and genuflected.<EOS> The inside of the church smelled like damp wood and furniture
+polish, not alive at all.<EOS> My father took off his coat and draped it over the
+edge of the pew and when I came back from communion I stole his glove.<EOS> The paper
+taste of the wafer was still in my mouth and I took a deep breath of the
+leather.<EOS> It smelled like March.<EOS> 
+
+We walked back through the school because it was drizzling, my father tall in
+his navy suit and my shoes going click on the linoleum.<EOS> There were two classes
+of each grade, starting at the sixth and going down to the first.<EOS> The hall ended
+in a T and we went left through the gym, walked underneath the bleachers and
+stood next to the side door, waiting for the rain to stop.<EOS> 
+
+It was dark under the bleachers.<EOS> My father was a young man, thirty-five, younger
+because he liked to be outside, to play softball on Saturday and to take my
+mother and me camping on vacation.<EOS> He stood rocked back on his heels with his
+coat thrown over his shoulders and his hands in his pockets.<EOS> I thought of bacon
+and eggs, toast with peach jam out of the jar.<EOS> I was so hungry.<EOS> 
+
+The space under the bleachers was secret and dark.<EOS> There were things in the
+shadows; a metal pail, a mop, rags.<EOS> Next to the door was a tall wrought-iron
+candle holder — the kind that stood at either end of the altar.<EOS> There was no
+holder and the end was jagged.<EOS> On the floor was a wrapper from a French Chew.<EOS>
+They were sold at eighth-grade basketball games on Friday nights.<EOS> The light from
+the door made the shadows under the bleachers darker, the long space stretched
+far away.<EOS> 
+
+I heard the rain and the faint rustle of paper and smelled damp concrete.<EOS> I did
+not go near my father but kept my hand in my pocket, feeling the soft leather
+glove.<EOS> 
+
+There was a rustling on the concrete and the drizzle of soft rain.<EOS> I wondered if
+anyone ever went back under the bleachers, if there were crickets or mice there.<EOS>
+The rustling might have been mice.<EOS> I wished the rain would stop.<EOS> I wanted to go
+home.<EOS> I made noises with my heels but they were too loud so I stopped.<EOS> Something
+else clicked and I tried to see what it was but couldn’t see anything.<EOS> It wasn’t
+as loud as my heels.<EOS> My father cleared his throat, looking out the door.<EOS> 
+
+I imagined a man down there in the dark, an escaped convict or a madman.<EOS> 
+
+It had nearly stopped raining.<EOS> In fifteen minutes we would be home and my mother
+would fry eggs.<EOS> 
+
+I heard a noise like paper.<EOS> My father heard it, too, but he pretended not to, at
+least he didn’t turn his head.<EOS> And there was a heavier sound, a rasp, like a box
+pulled over concrete.<EOS> I looked at my father but he didn’t turn his head.<EOS> I
+wished he would turn his head.<EOS> There was a click again and the rustle, and I
+could not think of what it could be.<EOS> I had no explanation for the particular
+combination of sounds.<EOS> No doubt there was, some two things that happened to be
+making noises at the same time.<EOS> Once in a fever I heard thousands of birds
+outside my window and I was terrified that they would fling themselves through
+the glass and attack me, but it was only the rain on the eaves.<EOS> 
+
+Chapter Two: Master Lunre<EOS> 
+
+My father’s actions were largely incomprehensible to me, guided by his own
+secret and labyrinthine calculations.<EOS> He dwelt in another world, a world of
+intrigue, bargains, contracts and clandestine purchases of land all over the
+island.<EOS> He was in many ways a world in himself, whole as a sphere.<EOS> No doubt his
+decisions were perfectly logical in his own eyes — even the one that prompted
+him, a patriotic islander, to bring me a tutor from Bain: Master Lunre, an
+Olondrian.<EOS> 
+
+The day began as it usually did when my father was expected home from his
+travels, the house festooned with flowers and stocked with coconut liquor.<EOS> We
+stood by the gate, washed and perfumed and arrayed in our brightest clothes, my
+mother twisting her hands in her skirt, my father’s wife with red eyes.<EOS> Jom,
+grown taller and broad in the shoulders, moaned gently to himself, while I stood
+nervously rubbing the heel of one sandal on the flagstones.<EOS> We scanned the deep
+blue valley for the first sign of the company, but before we saw them we heard
+the children shouting: “A yellow man!”<EOS> 
+
+A yellow man!<EOS> We glanced at one another in confusion.<EOS> My mother bit her lower
+lip; Jom gave a groan of alarm.<EOS> At first I thought the children meant my father,
+whose golden skin, the color of the night-monkey’s pelt, was a rarity in the
+islands; but certainly the children of Tyom were familiar with my father, and
+would never have greeted a council-member with such ill-mannered yells.<EOS> Then I
+remembered the only “yellow man” I had ever seen, an Olondrian wizard and doctor
+who had visited Tyom in my childhood, who wore two pieces of glass on his eyes,
+attached to his ears with wires, and roamed the hills of Tinimavet, cutting bits
+off the trees.<EOS> I have since learned that that doctor wrote a well-received
+treatise, On the Medicinal Properties of the Juice of the Young Coconut, and
+died a respected man in his native city of Deinivel; but at the time I felt
+certain he had returned with his sack of tree-cuttings.<EOS> 
+
+“There they are,” said Pavit, the head house-servant, in a strained voice.<EOS> And
+there they were: a chain of riders weaving among the trees.<EOS> My father’s plaited
+umbrella appeared, his still, imposing figure, and beside him another man, tall
+and lean, astride an island mule.<EOS> The hectic screams of the children preceded
+the company into the village, so that they advanced like a festival, drawing
+people out of their houses.<EOS> As they approached I saw that my father’s face was
+shining with pride, and his bearing had in it a new hauteur, like that of the
+old island kings.<EOS> The man who rode beside him, looking uncomfortable with his
+long legs, kept his gaze lowered and fixed between the ears of his plodding
+mule.<EOS> He was not yellow, but very pale brown, the color of raw cashews; he had
+silver hair, worn cropped close to the skull so that it resembled a cap.<EOS> He was
+not the leaf-collecting doctor, but an altogether strange man, with silver
+eyebrows in his smooth face and long fine-knuckled hands.<EOS> As he dismounted in
+front of the house I heard my mother whispering: “Protect us, God with the
+Black-and-White Tail, from that which is not of this earth.”<EOS> 
+
+My father dismounted from his mule and strutted toward us, grinning.<EOS> I thought I
+caught an odor off him, of fish, sea-sickness and sweat.<EOS> We knelt and stared
+down at the bald ground, murmuring ritual greetings, until he touched the tops
+of our heads with the palm of his fleshy hand.<EOS> Then we stood, unable to keep
+from staring at the stranger, who faced us awkwardly, half-smiling, taller than
+any man there.<EOS> 
+
+Wikinews interviews meteorological experts on Cyclone Phalin<EOS> 
+
+File photo of interviewee David Titley.<EOS> Image: David Titley.<EOS> 
+
+Cyclone Phailin has winds that have been measured at 200 km / h, as it surges
+over land will it begin to lose strength?<EOS> 
+
+Yes, all tropical cyclones are driven by high heat content waters.<EOS> Once a storm
+moves over any appreciably sized piece of land, the moisture source is removed
+and the storm begins to dissipate.<EOS> As of the last advisory, T C Phailin has
+winds of 190 kilometers per hour and has moved inland, headed on a northwest
+track.<EOS> That is a Category 3 storm.<EOS> The forecast is for a continued decline in
+strength to a tropical storm within 24 hours and a tropical depression within 36
+hours.<EOS> However, there will be very heavy rains and flooding along its path.<EOS> 
+
+Yes, it will loose strength steadily as more and more of this swirling system
+moves from being over ocean to being over land.<EOS> This occurs for two reasons:<EOS> 
+
+As it moves over land, it is cut off from the source of energy driving the storm
+[which is] the evaporation of water from the warm sea surface;<EOS> 
+
+Increased friction - the ocean surface is much, much smoother than the land
+surface.<EOS> 
+
+Tropical cyclones are sustained by a form of energy called latent heat, which is
+released by moisture evaporated from the ocean that condenses to form rain.<EOS> As
+tropical cyclones make landfall, this energy source is cut-off and they rapidly
+lose strength as they move over land.<EOS> 
+
+Yes, the Cyclone is almost certain to lose strength as it surges over land.<EOS>
+Cyclones gather their strength through scraping moisture and heat from warm
+ocean water that it is not the case over land.<EOS> In the mean time, much stronger
+friction over land quickly reduces their strength.<EOS> 
+
+Yes.<EOS> All tropical cyclones lose strength once they make landfall.<EOS> However, they
+can remain dangerous storms due to very heavy rains and subsequent landslides,
+and river flooding.<EOS> 
+
+Phailin's winds will rapidly weaken as it pushes inland.<EOS> 
+
+Once Cyclone Phailin comes on shore it will immediately begin to lose strength.<EOS>
+However, and this is important, it still will contain lots of rainfall making
+flooding an almost certainty.<EOS> 
+
+File photo of interviewee R Saravanan.<EOS> Image: R Saravanan.<EOS> 
+
+A previous cyclone in 1999 in the Bay of Bengal area of India left 10,000 people
+dead.<EOS> Is the Indian government well prepared to deal with this cyclone?<EOS> 
+
+I have not followed that aspect of the societal response for the present storm.<EOS>
+However, historically, there have been several events that should cause a
+societal response.<EOS> Hopefully, we all learn from past mistakes.<EOS> The history of
+strong cyclones and death in the region is notable, with at least 5 large
+cyclone events in the past 35 years with 10,000 and as many as 300,000 people
+killed, millions left homeless and estimated damages as high as US$ 10 billion.<EOS>
+
+I don't have enough information to answer this question, one way or the other.<EOS> 
+
+From all the press reports that I have read, the Indian government appears to
+have taken the threat of Cyclone Phailin very seriously indeed.<EOS> The government
+has been much more pro-active in preparing for this cyclone than in the past.<EOS>
+The forecasts of cyclone track and intensity have been fairly accurate.<EOS>
+Mandatory mass evacuations have been carried out, which is essential to minimize
+loss of life in these situations.<EOS> Unfortunately, extensive property damage is
+bound to occur even with the best preparation.<EOS> 
+
+My knowledge of the responsiveness of the Indian government to this storm is
+purely from the cyber space.<EOS> I heard that they orchestrated the largest people
+evacuation to a natural disaster in Indian history.<EOS> This shall be applauded
+given the size and strength of Phailin.<EOS> I visited the damaged area of the 1999
+storm near Bhubaneshwar in the summer of 2012 for an invited symposium and
+summer school on tropical cyclones [...] sponsored by the Indian government.<EOS>
+Given the living standard and residence of people living near the coastal areas
+in this region, the evacuation is certainly necessary and essential to save
+lives.<EOS> 
+
+I cannot comment directly on how the Indian government was prepared for this
+cyclone.<EOS> However, the news reports (BBC etc.) were very encouraging in that the
+authorities were reportedly making strenuous efforts to evacuate the population
+from near the coast and areas that are prone to flooding.<EOS> Water is the main
+killer in these storms.<EOS> 
+
+From all reports that I have seen, the government was well prepared for this
+cyclone.<EOS> 
+
+For this question I don't know the 'preparedness' of the Indian gov't to deal
+with this.<EOS> 
+
+Wikinews interviews Mario J. Lucero and Isabel Ruiz of Heaven Sent Gaming<EOS> 
+
+General questions<EOS> 
+
+What is Heaven Sent Gaming?<EOS> 
+
+Heaven Sent Gaming is basically me and Isabel, I'm Mario J. Lucero.<EOS> 
+
+And, I'm Isabel Ruiz.<EOS> 
+
+And, together we formed this thing, it's sort of like an entertainment team.<EOS> We
+started it basically, because I wanted to - I wanted to work with Isabel on a
+lot of projects that we had going on together.<EOS> We were coming with comics, like,
+left and right, we were coming up with things like Karis, in high school she
+came up with that one, I came up with an individual story called Thad's World
+Destruction and, she wanted to illustrate it, and so, that's the way we ended up
+doing it.<EOS> 
+
+Yep, we like to just make our own original content, and, yep, that's what we
+wanted to do.<EOS> 
+
+How did you two meet?<EOS> 
+
+We met back in high school.<EOS> In this private, tiny-tiny private school of 50
+students.<EOS> But, before hand in middle school, I kept on hearing about this guy
+named Mario, and he kept on hearing about me, this girl named Isabel.<EOS> And,
+everyone, all of our friends and all of our acquaintances would say, "Hey, you'd
+get along with him really well."<EOS> So before hand I kinda knew about him, but I
+never met him.<EOS> And one of our friends, our common friends, he introduced us
+during study hall, and we just kind of hit it off from there.<EOS> 
+
+It's true.<EOS> 
+
+Who else is involved in this project?<EOS> 
+
+Currently, we're in talks with people.<EOS> There's Jeff [Drake], who is behind the
+camera.<EOS> 
+
+Right now, yeah, he's helping us right now.<EOS> We're talking about doing some
+individual web series, video series.<EOS> Josh Kindig, he's coming on board, he has
+some ideas for that too, he wants to take over "aywv" and do more gaming news.<EOS> 
+
+There's of course Jason, who is our editor and he's the one who writes dD.<EOS> 
+
+Digital Domain<EOS> 
+
+What is your purpose behind this venture?<EOS> 
+
+Well, back in college, back in Collins College, Isabel and I, we had met like
+she said at Sandia View Academy, and we went off to college together in Arizona;<EOS>
+and ... (how do I best explain this?)<EOS> Basically, she came up with a few class
+projects, and I came up with a few class projects;<EOS> we started working with a few
+of our friends, and colleagues and whatnot.<EOS> Those included Drew Cass, Devin
+Thurlow, people like that.<EOS> She had several ideas, and she used to draw a lot in
+the sketchbook, she used to have this thick sketchbook that she used to carry
+around with her everywhere, where she'd draw these different characters and
+whatnot;<EOS> and she was always really shy to show that off to people, and I wanted
+to help her show that stuff, and I wanted to bring it out to the world.<EOS> I was a
+writer, and she always liked my writings, so I was like, let's just get both of
+our things together, and let's get this done.<EOS> 
+
+And for me, what I want the purpose to be, is to inspire people.<EOS> To bring a
+little more light to the world is what I want, out of all of this.<EOS> 
+
+And what was the verse that we have?<EOS> First Corinthians 9:25?<EOS> 
+
+Yes.<EOS> 
+
+Yeah, exactly.<EOS> We just want to be able to bring, like she said, bring light into
+the entertainment and into the media industry, specifically is what we do.<EOS> 
+
+Yeah.<EOS> 
+
+August 19, 1975<EOS> 
+
+Dear Hannah:<EOS> 
+
+We are back from Europe, having been to London then to Mallorca and back to
+London.<EOS> It was hot, as you yourself will know from your stay in Switzerland and
+the newspapers -- London was sweltering and the parks are not green, probably
+for the first time in two hundred years.<EOS> 
+
+Martha greatly enjoyed our stay in Mallorca at the villa of our friend Vane
+Ivanovic.<EOS> Luncheons and dinners were crowded with guests, but in the evenings
+she played bridge constantly and gossiped with our hostess.<EOS> Vane himself
+presented me with five hundred pages of his memoirs when I arrived and, between
+sleeping and talking, I cut and edited the work: I am on holiday the inveterate
+and proverbial busman.<EOS> I wrote only about 2000 words on my novel, but I've
+finished now five chapters.<EOS> It is romantic, and sad, which is to say,
+interesting experience recollected.<EOS> 
+
+At Vane's villa I met the Prince of Spain, Alphonso, who is the son of King
+Alphonso's deaf and mute son (the second one).<EOS> The Prince is married to Franco's
+granddaughter, a marvelously beautiful and seriously educated girl of twenty-six
+who is quite wasted on this royalist.<EOS> I thought that in Mallorca I had at least
+escaped my duties as Regent, but Alphonso asked me about bilingual education for
+Puerto Ricans and beraded the Americans for suppressing their "fourteen million
+Latins."<EOS> He told me that Dean Acheson told him that Harry Truman denied Spain
+Marshall Plan aid because Truman was a Protestant.<EOS> When I argued that a lot
+ofAmerican felt deeply about the Spanish Civil War, and that the Marshall Plan
+was devised to help countries ravaged by the war, whereas Spain did not fight,
+he replied that this was a superficial answer.<EOS> Isn't it marvelous how wars, even
+when they are not fought, are found to betray everyone?<EOS> 
+
+It is a quiet summer in New York, especially as there isn't such news except
+that of the city's financial troubles.<EOS> Odd, though, that there is none of the
+hectic spending and living here that seems to obtain amongst moneyed people and
+even the middle classes in London, where I was amazed to discover that the shops
+are full and places of entertainment are crowed.<EOS> I don't know what to make of it
+-- the idea that it shows the last days of Rome doesn't quite strike me as
+right.<EOS> The pound will surely fallto $ 2.00 -- I've already started to discount
+our assets in London, although the operating revenues and profits there on our
+scientific books and journals are holding up quite apart from inflation in
+prices.<EOS> What's happening in New York willhappen in some other cities around the
+world, I am convinced: Milan or Rome, Paris, Jakarta, and so forth.<EOS> 
+
+We miss you, Hannah, but we know that you must be getting some real rest.<EOS> Will
+you go to Israel at the end of your stay?<EOS> What are the dates of Aberdeen?<EOS> Is
+there anything you need?<EOS> 
+
+I've seen the doctor twice since I've been back, and he's convinced that I just
+missed an "episode," which means that I suffered what is always called, rather
+badly I think, a "coronary insufficiency."<EOS> I feel quite well now and I am
+watching myself.<EOS> I lost twelve pounds.<EOS> I've promised Dr. Steiner that I will not
+travel at all, andon humid days I stay at home and work and read.<EOS> I'm rereading
+Johnson's Lives of The Poets, a splendid work that proves that the best
+criticism is based on sensibility to art and prejudice to behavior.<EOS> 
+
+Mary is working away on her novel.<EOS> I've been in touch with her briefly -- of
+course I saw her when she arrived in New York -- about reissuing Stones of
+Florence.<EOS> I am publishing the Chiaramonte book in the Spring.<EOS> Mary has provided
+a preface.<EOS> 
+
+How does The Life of the Mind proceed?<EOS> I look forward to going over manuscript
+with you when you return.<EOS> We were, as you will recall, interrupted when we were
+working at Aberdeen.<EOS> Hannah, Martha and I send you love and greetings and we
+hope that the summer ends with lazy leisurely days for you.<EOS> We shall be seeing
+you soon.<EOS> 
+
+Yours,<EOS> 
+
+Bill<EOS> 
+
+Undergraduate Student Government<EOS> The Pennsylvania State University 223 HUB -
+Robeson Center University Park PA 16802-6601<EOS> 
+
+Phone: 814.863.1874<EOS> Fax: 814.863.6874<EOS> http://www.clubs.psu.edu/up/usg<EOS> 
+
+8-May-2006<EOS> 
+
+Robert Pangborn Vice President and Dean for Undergraduate Education 417 Old Main<EOS>
+
+Dr. Pangborn,<EOS> 
+
+I hope all is well in the Office of Undergraduate Education, and thank you for
+scheduling time to meet with me regarding the Penn State Wiki proposal.<EOS> The
+overall proposal paints broad strokes in defining how wiki technology can be
+useful at Penn State; I look forward to productive conversation with your office
+focusing on one aspect of the proposal: student-based course descriptions.<EOS> 
+
+In three letters submitted to the Office of University Relations and Division of
+Student Affairs, I defend wiki technology as a means to improve overall
+University communications.<EOS> The letters outline faculty and student benefits,
+editing fundamentals, online legal protections, information quality and
+reliability, and promotion of free speech in an online setting.<EOS> The purpose of
+this letter is to provide appropriate background to facilitate our 9-May-2006
+meeting.<EOS> 
+
+While University Relations and Student Affairs object to University-sponsored
+public wikis on the grounds that it creates a "risk of false information going
+out to too many people before it can be corrected," in addition to the
+University having a "certain respect for fact checking and the truth" and
+"responsibility to maintaining accurate information," 1 I posit that the
+rational lacks merit in light of individuals being able to judge for themselves
+what information is trustworthy on a wiki.<EOS> I acknowledge the University's
+responsibility to maintain accurate information on official Web pages, however,
+the University policy entitled "Copyright Information” 2 reads as follows
+(emphasis added):<EOS> 
+
+Battle, Catherine.<EOS> "Penn State decides against supporting wiki project."<EOS> The
+Daily Collegian, 10-February-2006<EOS> 
+
+Copyright Information: http://www.psu.edu/ur/copyright.html<EOS> 
+
+The information presented on Penn State's Web site comes from a variety of
+sources, including not only official Penn State departments and colleges, but
+also unofficial sources and individuals.<EOS> Although every effort is made to
+present current and accurate information, the University does not author or edit
+all of the pages presented here and therefore cannot assume responsibility for
+all information.<EOS> The author of each Web page is responsible for the content of
+that page and is expected to abide by University policies and local, state, and
+federal laws.<EOS> 
+
+The Penn State Wiki was never proposed as a source of official information, and
+the University already hosts non-official content that is highly circulated yet
+occasionally incorrect (e.g., The Daily Collegian).<EOS> 
+
+Additionally, higher circulation of a wiki article decreases the likelihood it
+will contain misinformation, a design advantage not present in other
+technologies such as newspapers, radio, and most internet sites.<EOS> As a volunteer
+editor for the Wikimedia Foundation, I am committed to ensuring that posted
+information is as accurate and reputable as possible by checking facts and
+verifying sources.<EOS> As such, I expect the same of other Wikimedia Foundation
+contributors and also intend for the standard of expectation to carry over into
+University-hosted wikis.<EOS> 
+
+I published video material on the Undergraduate Student Government (U.S.G.)
+website 3 addressing benefits of wiki technology, and I recorded individual
+commentary.<EOS> The following is a partial transcript from one videocast entitled
+"Introduction to the Penn State Wiki":<EOS> 
+
+U.S.G. Wiki Resources: http://www.clubs.psu.edu/usg/wiki<EOS> 
+
+George Chriss:<EOS> Student--based class descriptions benefit Penn State two--fold.<EOS>
+The first is the ability for current students enrolled in the class to provide
+content descriptions for other students considering taking the same course, for
+those students to have a better idea of what to expect in terms choosing the
+best academic course for their needs.<EOS> Penn State currently doesn't offer very
+comprehensive information on any of its 15,000--plus courses.<EOS> The second reason
+student--based class descriptions are beneficial to Penn State are in providing
+instructors and other administrative officials with more up--to--date and
+comprehensive feedback than they would normally be able to receive through
+traditional methods such as surveys.<EOS> The idea is for Penn State to have enough
+input to intelligently benefit and improve upon each of their 15,000 courses.<EOS>
+Penn State still maintains control of each of the courses, so the academic
+standard is kept just as high as it always has been.<EOS> This is the area
+Undergraduate Student Government is most passionate about in terms of improving
+the operation of the University.<EOS> 
+
+I suggest instituting a pilot program to evaluate the effectiveness of wikis in
+providing student-based course descriptions, with one wiki assigned to each
+academic unit.<EOS> Under the pilot program, faculty members would be able to
+volunteer their classes for participation, and any person with University
+affiliation would be able to edit any of the descriptions.<EOS> The pilot program, if
+successful, should attract additional faculty members and encourage departmental
+participation; the program would remain manageable while being scaled into
+widespread usage.<EOS> 
+
+I look forward to our discussion on Tuesday, and would be more than willing to
+elaborate on any of the areas that interest you during or after our meeting.<EOS> 
+
+Respectfully,<EOS> George Chriss<EOS> 
+
+Student, University Faculty Senate Eberly College of Science U.S.G. Academic
+Assembly<EOS> 
+
+encl: U.S.G. Joint Resolution 36-01: Penn State Wiki<EOS> cc: Donald Leslie,
+Assistant V.P. and Assoc. Dean for Undergraduate Education<EOS> 
+
+Parents prosecuted after homeopathic treatment leads to daughter's death<EOS> 
+
+Friday, May 8, 2009<EOS> 
+
+Thomas Sam, 42, and his wife Manju Sam, 36, from Sydney, Australia, are
+undergoing trial for manslaughter by gross negligence for the death of their
+nine-month-old child, Gloria.<EOS> She died from infection caused by severe eczema
+after they shunned effective conventional medical treatments for homeopathy, a
+form of alternative medicine that has been described as pseudoscience.<EOS> Articles
+in peer-reviewed academic journals including Social Science & Medicine have
+characterized homeopathy as a form of quackery.<EOS> 
+
+An example of severe eczema.<EOS> Image: Jambula.<EOS> 
+
+Gloria developed severe eczema at the age of four months and the parents were
+advised to send the child to a skin specialist.<EOS> Thomas Sam, a practising
+homeopath, instead decided to treat his daughter himself.<EOS> His daughter's
+condition deteriorated, to the point that the baby spent all her energy battling
+the infections caused by the constant breaking of the skin, leading to severe
+malnutrition and, eventually, her death.<EOS> By the end, Gloria's eczema was so
+severe that her skin broke every time her parents changed her clothes or nappy,
+and in the words of the Crown prosecutor, Mark Tedeschi, QC, "Gloria spent a lot
+of the last five months of her life crying, irritable, scratching and the only
+thing that gave her solace was to suck on her mother's breast."<EOS> Gloria also
+became unable to move her legs.<EOS> 
+
+Mr. Tedeschi also told the court that, over the last five months of her life,
+"Gloria's eczema played a devastating role in her overall health and it is
+asserted by the Crown that both her parents knew this and discussed it with each
+other."<EOS> However, despite their child's severe illness, and her lack of
+improvement, the Sams continued to shun conventional medical treatment, instead
+seeking help from other homeopaths and naturopaths.<EOS> Gloria temporarily improved
+during the rare times they used conventional treatments, but they soon dropped
+them in favour of homeopathy, and she consistently worsened.<EOS> 
+
+Allegedly, Thomas' sister pleaded with him to send Gloria to a conventional
+medical doctor, but he replied "I am not able to do that".<EOS> The parents are also
+accused of putting their social life ahead of their child, taking her on a trip
+to India and leaving her to servants while embarking on a busy social schedule,
+and giving her homeopathic drops instead of using the prescription creams they
+had been given.<EOS> 
+
+Gloria was finally taken to the emergency department shortly before her death.<EOS>
+By this time, "her skin was weeping, her body malnourished and her corneas
+melting", according to the Sydney Morning Herald.<EOS> 
+
+Speaking in the parents' defense, Tom Molomby, SC, said that, as the parents
+came from India, where homeopathy is in common use, they should be declared not
+guilty due to cultural differences.<EOS> 
+
+Homeopathy is a form of alternative medicine which treats patients with
+massively diluted forms of substances that, if given to a healthy person
+undiluted, would cause symptoms similar to the disease.<EOS> Typical treatments take
+the dilutions, with ritualised shaking between each step of the dilution, past
+the level where any molecules of the original substance are likely to remain;
+for homeopathic treatments to work, basic well-understood concepts in chemistry
+and physics would have to be wrong.<EOS> There is no evidence that homeopathy is more
+effective than placebo for any condition.<EOS> 
+
+Australian children suffering from iodine deficiency<EOS> 
+
+Thursday, February 23, 2006<EOS> 
+
+Almost half of all Australian primary school children are mild to moderately
+iodine deficient, researchers say.<EOS> A new study documenting iodine nutritional
+status in Australian school children has revealed many are not getting enough
+iodine - which can lead to mental and growth retardation.<EOS> The report's authors
+say iodine deficiency is "the sleeper health issue in Australia", and
+potentially a very serious one.<EOS> 
+
+The results of the Australian National Iodine Nutrition Study published in the
+Medical Journal of Australia this week, revealed that children in mainland
+Australia are borderline iodine deficient.<EOS> The report has prompted calls for all
+edible salt to be iodised.<EOS> They say adding the mineral to salt is the simplest
+and most effective method of preventing iodine deficiency disorders.<EOS> 
+
+A cross-sectional survey of 1709 schoolchildren - aged 8–10 years, from 88
+schools - was carried out in New South Wales, Victoria, South Australia, Western
+Australia and Queensland, between July 2003 and December 2004.<EOS> Tasmania was
+excluded from the study - where an voluntary iodine fortification program using
+iodised salt in bread, is ongoing.<EOS> 
+
+The authors say the results confirm the existence of inadequate iodine intake in
+the Australian population.<EOS> They call for "urgent implementation of mandatory
+iodisation of all edible salt in Australia."<EOS> Most iodine in food comes from
+seafood, milk and iodised salt.<EOS> 
+
+Professor Cres Eastman, Director of the National Iodine Nutrition study, and
+Chairman of the Australian Centre for Control of Iodine Deficiency Disorders,
+says it is crucial that children and pregnant women in particular have an
+adequate intake of iodine.<EOS> Iodine deficiency can lead to serious health problems
+including brain damage, stunted growth and deafness.<EOS> 
+
+Professor Eastman says manufacturers could easily remedy the situation by using
+iodised salt in their products in line with the United States and most European
+countries.<EOS> "I suspect they won't do that on a voluntary basis, we've tried so
+far and haven't succeeded, so we've convinced the Food Standards of Australia
+and New Zealand | that all salt should be iodised," he said.<EOS> 
+
+The report says the decline in iodine intake appears to be due to changes in the
+dairy industry, where chlorine-containing sanitisers have replaced
+iodine-containing sanitisers.<EOS> Iodine released from these chemicals into milk has
+been the major source of dietary iodine in Australia for at least four decades,
+but is now declining.<EOS> Another contributory factor has been the decreasing
+consumption of iodised salt used in foods.<EOS> The report states that few if any
+food manufacturers use iodised salt in the preparation and manufacture of foods.<EOS>
+
+Professor Eastman says iodine is added to only 10 per cent of Australian salt in
+contravention of a World Health Organisation recommendation that all salt be
+iodised.<EOS> He says authorities are reacting slowly to his urgent calls for
+mandatory iodised salt.<EOS> 
+
+"The effects of iodine deficiency are dependent upon how severe it is and when
+it occurs.<EOS> So if we go to the pregnant woman, she doesn't get enough iodine, she
+won't make enough thyroid hormone, and the foetus won't get the amount of
+thyroid hormone it needs for adequate and proper development of the brain, so
+you'll then see consequences being loss of IQ, learning difficulties, hearing
+difficulties and other neurological problems," Professor Eastman said.<EOS> 
+
+"If an infant's not getting enough iodine ... brain development won't be
+completed and they won't grow normally, and as you get older the problem will be
+that you will develop a goiter and your thyroid won't function as well as it
+should, so that may have all sorts of pernicious effects upon normal function in
+life."<EOS> 
+
+More than two billion people around the world live in areas prone to iodine
+deficiency, and yet the problem is easily fixed.<EOS> The World Health Organisation
+(WHO) recommends that every country should iodise all edible salt.<EOS> The most well
+known effects of IDD are visible goiter and cretinism, a condition characterised
+by severe brain damage occurring in very early life.<EOS> WHO say Iodine deficiency
+is the world’s most prevalent, yet easily preventable, cause of brain damage.<EOS> 
+
+Professor Eastman said he is alarmed by what they found.<EOS> "Pregnant women in
+Australia are getting about half as much as what they require on a daily basis.<EOS>
+So that alarms me, because there's quite serious potential for adverse effects
+and brain damage in the next generation of children born in this country," he
+said.<EOS> 
+
+"If Iodine deficiency is serious you lose 15 IQ points, on average.<EOS> There
+shouldn't be anyone suffering from iodine deficiency in a developed country like
+Australia."<EOS> 
+
+Lydia Buchtmann for Food Standards Australia New Zealand, says they are looking
+at mandatory guidelines on iodine by the end of the year.<EOS> She says the issue is
+complicated and will take time to get right.<EOS> We need to "make sure there's
+sufficient iodine added into the food supply, to help those people with a
+deficiency.<EOS> But at the other end of the scale we've got to make sure the people
+who eat a lot of food - we all know the teenage boy who comes home from school
+and eats a whole loaf of bread - that those people don't get too much and get
+overdose," Ms Bauchtman said.<EOS> "One of the reasons that iodine is going down is
+because people are taking that good healthy eating message and not adding salt
+during cooking."<EOS> 
+
+Senior researcher Mu Li, of the University of NSW's school of public health,
+said "it is reasonable to assume that pregnant women and breastfeeding mothers
+are also iodine deficient, putting the next generation of children born in this
+country at risk of the neuropsychological consequences of iodine deficiency."<EOS> 
+
+What you're hearing is Mangal Shobhajatra, an annual procession of thousands of
+people that takes over the streets of Bangladesh's capital city, Dhaka.<EOS> It marks
+the start of the Bengali New Year, and as you might expect of a New Year's
+celebration, it's a very festive affair.<EOS> Not long ago, UNSECO, which is the
+educational, scientific and cultural agency of the United Nations, named this
+parade intangible cultural heritage.<EOS> But what might look like just a street
+party is actually a creative stand for unity and against the forces of
+intolerance who seek to divide and oppress Bangladeshis.<EOS> Welcome to Into the
+Deep, The Global Voices podcast, where we dig deep into one topic that isn't
+getting the media coverage it deserves.<EOS> I'm Lauren, news editor at Global
+Voices.<EOS> I live in Bilbao, Spain.<EOS> 
+
+And I'm Sahar, managing editor at Global Voices.<EOS> I'm currently in Lahore,
+Pakistan, and today we are digging deep into Bangladesh's Mangal Shobhajatra.<EOS>
+The tide of xenophobia has seemingly swept Europe and the United States in
+recent years, culminating in 2016 with the UK's vote to leave the European Union
+and the election of Donald Trump in the US.<EOS> But intolerance is not a phenomenon
+that's exclusive to the Western world by any means.<EOS> From Myanmar to South Africa
+to Indonesia, there are those who view diversity as a source of fear rather than
+strength.<EOS> What about you?<EOS> Do you disagree with this trend?<EOS> And are you thinking
+about what to do to combat these forces that want to sow the seeds of division?<EOS>
+Perhaps then Bangladesh and its unique New Year's procession can offer some
+inspiration.<EOS> 
+
+Mangal sh- --.<EOS> How does it go?<EOS> 
+
+Mangal Shobhajatra.<EOS> It's -- in Bangla we always pronounce o, so it's a a --<EOS>
+Although it is written in English as M A N, but it sounds more like Mongol.<EOS> O.<EOS> 
+
+Okay.<EOS> And the second part?<EOS> Say it again very slowly.<EOS> 
+
+Shobhajatra.<EOS> Shobha-.<EOS> Shobha-.<EOS> Shobhajatra.<EOS> 
+
+Okay, perfect.<EOS> We don't want to mess it up.<EOS> 
+
+Mangal Shobhajatra.<EOS> 
+
+Yeah, Mangal Shobhajatra.<EOS> 
+
+That's Rezwan.<EOS> 
+
+This is Rezwan from Bangladesh.<EOS> 
+
+He's a blogger and the South Asia editor for Global Voices.<EOS> 
+
+Mangal Shobhajatra is like a carnival or a victory rally.<EOS> It's it’s very loud,
+with people shouting, shouting different slogans and, uh, they're singing,
+they're dancing and people participate with uh joy.<EOS> 
+
+It's a vibrant, colorful, creative, open for all secular identity.<EOS> Uh, a lot of
+fun is here.<EOS> 
+
+And that's Pantha.<EOS> 
+
+This is also from Dhaka, Bangladesh.<EOS> 
+
+He's a copywriter and a member of the Global Voices community, who's been
+writing for us now for several years.<EOS> We spoke to both Pantha and Rezwan to
+learn more about Mangal Shobhajatra.<EOS> 
+
+Yeah, it it all starts with making of masks.<EOS> Actually, the students of uh the
+Charukola Institute, which is the, uh, Faculty of Fine Arts of Dhaka University
+and uh they prepare all these, uh, all kinds of interesting masks, and they are
+very colorful, and they bear animals and demons and mythical mythical faces and
+all.<EOS> And those are pretty interesting.<EOS> And people carry those masks, uh, in, in
+batons, or they put it on their face and they, they dance and, uh, on the way
+there are like many street shops, uh, for food and, and and balloons, children
+are running around.<EOS> 
+
+The procession takes place every year on the morning of the first day of the
+Bengali calendar, which is April 14th or 15th.<EOS> Students and teachers of Dhaka
+University's Faculty of Fine Arts organize it and anyone is free to join in.<EOS> 
+
+Have either of you attended?<EOS> 
+
+Yeah, uh, many times.<EOS> Um, it's one of the go go to things that -- uh, during the
+New Year celebration.<EOS> So we have a kind of ritual.<EOS> So, uh, on the first day of
+the new year, we go in the morning to listen to, uh, Rabindra Sangeet.<EOS> That is
+uh Tagore songs.<EOS> 
+
+Rabindra Sangeet or Tagore songs or popular songs that were written in the late
+19th and early 20th centuries by a man named Rabindranath Tagore.<EOS> They're often
+based on Hindustani classical music and folk music of Bengal.<EOS> An interesting
+fact, Rabindranath Tagore was the first non-European to win the Nobel Prize in
+Literature.<EOS> 
+
+Good evening everybody and welcome to Beyond the Mat!<EOS> The Beyond the Mat show
+after WrestleMania.<EOS> Well, it happened folks.<EOS> WrestleMania happened, Raw
+happened, Smackdown happened, everything fucking happened.<EOS> Holy shit, there is
+so much to talk about this week, and we’re going to cover it all, the best we
+can.<EOS> I’m your host as always, Dave, and I am joined by Alex.<EOS> 
+
+Howdy!<EOS> 
+
+We were supposed to have word from Carl.<EOS> We don’t know where he is, so I’ll just
+take that as a – he’s one of the people that is cutting his wrists because the
+Undertaker’s career is over!<EOS> Those of you who take offense to that, fuck off and
+–<EOS> 
+
+What did, uh, what’s his name – what did, uh, our, our, wh-, the one that always
+is dressed up like Undertaker on Facebook?<EOS> 
+
+Yeah, he did the exact same thing, he folded his clothes and put ’em on or
+something.<EOS> 
+
+Yeah, I thought I saw that picture, what does it look like, what is he – what is
+he doing?<EOS> 
+
+I’m ignoring anybody who is taking this retirement personally and acting like
+this is the end of the fucking world.<EOS> Um, I’m gonna say this right now, and I’m
+gonna say it again when we get to the match – I’m glad it’s over.<EOS> And I know
+people that are getting offended by that.<EOS> I’m glad it’s over.<EOS> 
+
+Look, I I can just – look, I fucking cried when – I fucking cried when – but
+it’s OK, it’s it’s not the end of the world.<EOS> 
+
+It’s not the end of the world.<EOS> You can still watch wrestling, it’s not “oh, he
+retired; that’s it, I’m done, I can’t watch it anymore.”<EOS> 
+
+I mean, for God’s sakes, he was only there like –<EOS> I mean, how many days are in a
+year?<EOS> 365 days, so he was there one out of – c’mon.<EOS> 
+
+Three days.<EOS> Four days.<EOS> He made two appearances.<EOS> 
+
+I mean, I mean, OK, think about it like this: at Wrestlemania 31 he was there
+once the whole year, cause he was only there the day of Wrestlemania.<EOS> So that’s
+one day of the year that you watched him, that year.<EOS> So that’s, really?<EOS> Are you
+really missing that much of wrestling by not having Undertaker there?<EOS> I mean,
+come on.<EOS> He’s my favorite wrestler, easily.<EOS> 
+
+Yeah, and he’ll be mine as well, but there does come a time when you have to go
+“look, it’s over”.<EOS> 
+
+I mean the guy – the guy – the guy can’t wrestle forever.<EOS> I mean he’s – he was,
+53?<EOS> Yeah that was not -- he wrestled like a 75,000 year-old man.<EOS> 
+
+Yeah, when we get to that match I’m gonna be so critical on it.<EOS> And I know
+people are gonna be pissed off at me.<EOS> And I don’t care, I’m gonna call it like I
+see it, the rose colored glasses are off, the nostalgia is gone.<EOS> Stop wanting
+the fucking 90s back, because the 90s are dead, get the fuck over it.<EOS> Um, yeah.<EOS>
+You people and your fucking 90s nostalgia, stop it.<EOS> Let the 90s fucking die.<EOS> Let
+it fucking die, please, just stop.<EOS> Stop.<EOS> Ugh.<EOS> How’s your week been Alex?<EOS> 
+
+It’s been good, yeah.<EOS> Um, it was – like, I don’t even remember – well, let me
+see.<EOS> I forgot to mention, I guess I should mention this now.<EOS> Ugh!<EOS> 
+
+Good time, better than never.<EOS> 
+
+This is actually not from this week but, let me see.<EOS> When was this?<EOS> Let me look
+at the calendar real quick on the computer.<EOS> This would have been … not last
+week, but the week – no, not last week, not the week before that, but the week
+before that, on March 25th was my 29th birthday.<EOS> 
+
+And you’re just now letting us know?<EOS> 
+
+Well I belie- I think I was wished happy birthday by all of you on Facebook, so,
+that’s fine.<EOS> But I didn’t – but I don’t think we’ve had a show since, cause we –
+cause we – cause we missed so many shows in a row.<EOS> But uh, yeah, I put a video
+up on YouTube.<EOS> We all drank a whole lotta shit.<EOS> Um, I didn’t get drunk at all
+despite literally shotgunning I think six or seven shots of … was it tequila? ..
+yeah, I think it was like really really decent tequila, in a row.<EOS> I didn’t feel
+anything, cause I don’t know that’s just how I am.<EOS> And some sake.<EOS> But yeah,
+that’s up there on my YouTube channel, not that anybody ever goes on it.<EOS> So uh,
+this week I don’t know, they added more DLC, the only DLC for King of Fighters.<EOS>
+King of Fighters XIV.<EOS> Did you say you liked Rock Howard?<EOS> I forget.<EOS> 
+
+I don’t mind Rock Howard.<EOS> Um I think he’s cool.<EOS> I’ve always been an Andy Bogard,
+Terry Bogard …<EOS> 
+
+Well they’re already in the game, so.<EOS> 
+
+Yeah, I know.<EOS> And I’m decent with Kim but I’m OK with Rock.<EOS> 
+
+Rock is now DLC for the game along with uh who else?<EOS> Yamazaki.<EOS> 
+
+Is Iori in there or did they take him out?<EOS> It’s Iori I think, or Yori?<EOS> Tall guy
+with the fucking red hair.<EOS> Not Rugal, but …<EOS> 
+
+No, I know who Rugal is.<EOS> 
+
+Madam Speaker, "I solemnly swear that in all things appertaining to the trial of
+the impeachment of Donald John Trump, President of the United States, now
+pending, I will do impartial justice according to the Constitution and laws."<EOS> 
+
+That is the oath Senators swore on January 16.<EOS> It is the oath created by
+Senators when they tried the first impeachment of a President in 1868.<EOS> It is an
+oath rooted in the Revolution fought by their grandparents to create a republic
+of laws, not kings.<EOS> It is an oath whose power derives from its common sense:
+that a juror must always be impartial for a trial to be fair.<EOS> And it is an oath
+made necessary by the fact that Senators are not, as we are not, under normal
+circumstances, impartial in our work.<EOS> 
+
+The words chosen for this oath recognize that when our Constitution calls
+Senators to try impeachment, it calls them away from their role as partisans.<EOS>
+When that oath is taken, Senators are supposed to step back from the affiliation
+of party or political kinship with or opposition to the President on trial.<EOS> They
+are required, as the oath plainly states, to "do impartial justice according to
+the Constitution and laws."<EOS> 
+
+Madam Speaker, this afternoon, Senators will be asked to vote on the two
+Articles of Impeachment the House presented on abuse of power and the
+obstruction of Congress.<EOS> After voting to refuse to hear evidence and call
+witnesses with pertinent information, nearly all Republican Senators have
+already announced that they will vote against the articles.<EOS> 
+
+In doing so, many of them acknowledge that what President Trump did was wrong
+and inappropriate.<EOS> They accept that it was wrong for him to withhold military
+aid to Ukraine until the President of that country promised to interfere in the
+American elections.<EOS> 
+
+The evidence of President Trump's abuse of power and attempt to solicit foreign
+interference in the 2020 elections is clear enough that Republican Senators
+cannot and have not denied the facts, yet they cannot bring themselves to
+confront this President and are choosing party over country.<EOS> 
+
+The Senator from Alaska, in explaining her decision to vote to block witnesses
+and evidence, tried to deflect responsibility from the consequences of her
+actions, writing: "I have come to the conclusion that there will be no fair
+trial in the Senate."<EOS> I agree with that.<EOS> She further said: "It is sad for me
+today to admit that, as an institution, the Congress has failed."<EOS> 
+
+Madam Speaker, the Congress has not failed.<EOS> The House did its job, whether you
+agree or not.<EOS> In regular order, by a vote of this House, we impeached the
+President of the United States based upon our oath to protect and defend the
+Constitution of the United States.<EOS> 
+
+The House did its job and did so with the solemnity required when undertaking
+the process of impeachment, which we did not seek but accepted as our
+responsibility under the Constitution.<EOS> We held hearings, called witnesses, and
+subpoenaed documents.<EOS> Many of the witnesses and documents, of course, were
+withheld by the White House.<EOS> 
+
+It is the Senate that will fail if Senators do not uphold their oaths to
+impartial justice.<EOS> It is the Senate, Madam Speaker, that will fail if it does
+not hold this President accountable for using a hold on military aid to compel
+an ally to interfere in our election for his own personal gain.<EOS> 
+
+History will judge poorly those who choose fear of their party over the courage
+to do the right thing.<EOS> Neither the Speaker nor myself, nor the whip, Jim
+Clyburn, urged any member in our party to vote any way on impeachment.<EOS> There was
+no lobbying.<EOS> There was no pressure.<EOS> Our members voted consistent with their oath
+of office and the conviction that that vote was required by that oath to protect
+and defend the Constitution.<EOS> 
+
+Americans will judge.<EOS> I am often asked why the House passed Articles of
+Impeachment even knowing that the odds were slim that Senate Republicans would
+set aside partisanship and hear the case as impartial jurors.<EOS> It is because I
+know future generations will look back on this chapter in our history and ask:<EOS>
+Who stood up for the Constitution and the laws?<EOS> Who stood up for the values our
+Founders charged us to keep?<EOS> Who refused to shrink from the heavy
+responsibilities of their oath?<EOS> I can be proud that the House did its job,
+followed the law, defended our Constitution.<EOS> 
+
+We did not convict; that is not our role.<EOS> Essentially, what we said was there
+was probable cause that powers had been abused and certainly cause to see that
+the President refused to cooperate with the constitutional responsibilities of
+the House of Representatives.<EOS> 
+
+I am also proud of the House managers, as all of my colleagues on the Democratic
+side of the aisle are proud of our managers who made their case.<EOS> They made their
+case with intellect.<EOS> They made their case with evidence that had been adduced
+here in the House.<EOS> They made their case and appealed to Senators to hold this
+President accountable, as our Founders intended.<EOS> 
+
+Almost everybody has watched a trial either in person or on television.<EOS> A trial
+is not an opening argument and a closing argument with nothing in between.<EOS>
+Seventy-five percent of our people wanted to have witnesses because that was
+their understanding of what a trial is, not just argument at the beginning and
+argument at the end, but evidence for jurors who have pledged to be impartial to
+consider.<EOS> Any judge in this country would agree that opening and closing
+statements alone are not a trial.<EOS> 
+
+Nevertheless, the House managers proved their case.<EOS> The truth is clear.<EOS> The
+American people know what that truth is and know what this President has done.<EOS>
+And they will remember who on this day abided by the truth, the whole truth, and
+nothing but the truth.<EOS> 
+
+Senator Hatfield, Mr. Chief Justice, Mr. President, Vice President Bush, Vice
+President Mondale, Senator Baker, Speaker O'Neill, Reverend Moomaw, and my
+fellow citizens:<EOS> 
+
+To a few of us here today this is a solemn and most momentous occasion, and yet
+in the history of our nation it is a commonplace occurrence.<EOS> The orderly
+transfer of authority as called for in the Constitution routinely takes place,
+as it has for almost two centuries, and few of us stop to think how unique we
+really are.<EOS> In the eyes of many in the world, this every 4-year ceremony we
+accept as normal is nothing less than a miracle.<EOS> 
+
+Mr. President, I want our fellow citizens to know how much you did to carry on
+this tradition.<EOS> By your gracious cooperation in the transition process, you have
+shown a watching world that we are a united people pledged to maintaining a
+political system which guarantees individual liberty to a greater degree than
+any other, and I thank you and your people for all your help in maintaining the
+continuity which is the bulwark of our Republic.<EOS> 
+
+The business of our nation goes forward.<EOS> These United States are confronted with
+an economic affliction of great proportions.<EOS> We suffer from the longest and one
+of the worst sustained inflations in our national history.<EOS> It distorts our
+economic decisions, penalizes thrift, and crushes the struggling young and the
+fixed-income elderly alike.<EOS> It threatens to shatter the lives of millions of our
+people.<EOS> 
+
+Idle industries have cast workers into unemployment, human misery, and personal
+indignity.<EOS> Those who do work are denied a fair return for their labor by a tax
+system which penalizes successful achievement and keeps us from maintaining full
+productivity.<EOS> 
+
+But great as our tax burden is, it has not kept pace with public spending.<EOS> For
+decades we have piled deficit upon deficit, mortgaging our future and our
+children's future for the temporary convenience of the present.<EOS> To continue this
+long trend is to guarantee tremendous social, cultural, political, and economic
+upheavals.<EOS> 
+
+You and I, as individuals, can, by borrowing, live beyond our means, but for
+only a limited period of time.<EOS> Why, then, should we think that collectively, as
+a nation, we're not bound by that same limitation?<EOS> We must act today in order to
+preserve tomorrow.<EOS> And let there be no misunderstanding: We are going to begin
+to act, beginning today.<EOS> 
+
+The economic ills we suffer have come upon us over several decades.<EOS> They will
+not go away in days, weeks, or months, but they will go away.<EOS> They will go away
+because we as Americans have the capacity now, as we've had in the past, to do
+whatever needs to be done to preserve this last and greatest bastion of freedom.<EOS>
+
+In this present crisis, government is not the solution to our problem;
+government is the problem.<EOS> From time to time we've been tempted to believe that
+society has become too complex to be managed by self-rule, that government by an
+elite group is superior to government for, by, and of the people.<EOS> Well, if no
+one among us is capable of governing himself, then who among us has the capacity
+to govern someone else?<EOS> All of us together, in and out of government, must bear
+the burden.<EOS> The solutions we seek must be equitable, with no one group singled
+out to pay a higher price.<EOS> 
+
+We hear much of special interest groups.<EOS> Well, our concern must be for a special
+interest group that has been too long neglected.<EOS> It knows no sectional
+boundaries or ethnic and racial divisions, and it crosses political party lines.<EOS>
+It is made up of men and women who raise our food, patrol our streets, man our
+mines and factories, teach our children, keep our homes, and heal us when we're
+sick — professionals, industrialists, shopkeepers, clerks, cabbies, and truck
+drivers.<EOS> They are, in short, "We the people," this breed called Americans.<EOS> 
+
+Well, this administration's objective will be a healthy, vigorous, growing
+economy that provides equal opportunities for all Americans, with no barriers
+born of bigotry or discrimination.<EOS> Putting America back to work means putting
+all Americans back to work.<EOS> Ending inflation means freeing all Americans from
+the terror of runaway living costs.<EOS> All must share in the productive work of
+this "new beginning," and all must share in the bounty of a revived economy.<EOS>
+With the idealism and fair play which are the core of our system and our
+strength, we can have a strong and prosperous America, at peace with itself and
+the world.<EOS> 
+
+1.1 What is Government?<EOS> 
+
+DIFFERENT TYPES OF GOVERNMENT<EOS> 
+
+The government of the United States can best be described as a republic, or
+representative democracy.<EOS> A democracy is a government in which political
+power—influence over institutions, leaders, and policies—rests in the hands of
+the people.<EOS> In a representative democracy, however, the citizens do not govern
+directly.<EOS> Instead, they elect representatives to make decisions and pass laws on
+behalf of all the people.<EOS> Thus, U.S. citizens vote for members of Congress, the
+president and vice president, members of state legislatures, governors, mayors,
+and members of town councils and school boards to act on their behalf.<EOS> Most
+representative governments favor majority rule:<EOS> the opinions of the majority of
+the people have more influence with government than those of the minority.<EOS> If
+the number of elected representatives who favor a proposed law is greater than
+those who oppose it, the law will be enacted.<EOS> 
+
+However, in representative governments like the United States, minority rights
+are protected: people cannot be deprived of certain rights even if an
+overwhelming number of people think that they should be.<EOS> For example, let’s say
+American society decided that atheists, people who do not believe that God
+exists, were evil and should be imprisoned or expelled from the country.<EOS> Even
+though atheists only account for about 7 percent of the population, they would
+be protected due to minority rights. 4<EOS> Even though the number of Americans who
+believe in God far outweighs the number who do not, the minority is still
+protected.<EOS> Because decisions are made through majority rule, making your
+opinions known and voting for those men and women who make decisions that affect
+all of us are critical and influential forms of civic engagement in a
+representative democracy such as the United States.<EOS> 
+
+In a direct democracy, unlike representative democracy, people participate
+directly in making government decisions.<EOS> For example, in ancient Athens, the
+most famous example of a direct democracy, all male citizens were allowed to
+attend meetings of the Assembly.<EOS> Here they debated and voted for or against all
+proposed laws.<EOS> Although neither the federal government nor any of the state
+governments function as a direct democracy—the Constitution requires the
+national and state governments to be representative forms of government—some
+elements of direct democracy do exist in the United States.<EOS> While residents of
+the different states vote for people to represent them and to make laws in their
+behalf in the state legislatures and in Congress, people may still directly vote
+on certain issues.<EOS> For example, a referendum or proposed law might be placed on
+the ballot for citizens to vote on directly during state or local elections
+instead of leaving the matter in the hands of the state legislature.<EOS> At New
+England town meetings, all residents are allowed to debate decisions affecting
+the town (Figure 1.5).<EOS> Such occasions provide additional opportunities for civic
+engagement.<EOS> 
+
+Figure 1.5<EOS> Residents of Boxborough, Massachusetts, gather in a local hotel to
+discuss issues affecting their town.<EOS> New England town meetings provide an
+opportunity for people to experience direct democracy.<EOS> This tradition has lasted
+for hundreds of years.<EOS> (credit: modification of work by Liz West)<EOS> 
+
+Most countries now have some form of representative government (Figure 1.6). 5<EOS>
+At the other end of the political spectrum are elite-driven forms of government.<EOS>
+In a monarchy, one ruler, usually a hereditary ruler, holds political power.<EOS>
+Although the power of some monarchs is limited by law, and such kings and queens
+often rule along with an elected legislature that makes laws for the country,
+this is not always the case.<EOS> Many southwest Asian kingdoms, such as Saudi
+Arabia, Qatar, and the United Arab Emirates, have absolute monarchs whose power
+is unrestricted.<EOS> As discussed earlier, another nondemocratic form of government
+is oligarchy, in which a handful of elite members of society, often those who
+belong to a particular political party, hold all political power.<EOS> For example,
+in Cuba, as in China, only members of the Communist Party are allowed to vote or
+hold public office, and the party’s most important members make all government
+decisions.<EOS> Some nondemocratic societies are totalitarian in nature.<EOS> Under
+totalitarianism, the government is more important than the citizens, and it
+controls all aspects of citizens’ lives.<EOS> Citizens’ rights are limited, and the
+government does not allow political criticism or opposition.<EOS> These forms of
+government are fairly rare.<EOS> North Korea is an example of a totalitarian
+government.<EOS> 
+
+Figure 1.6<EOS> The map of the world shows the different forms of government that
+currently exist.<EOS> Countries that are colored blue have some form of
+representative democracy, although the people may not have as much political
+power as they do in the United States.<EOS> Countries that are colored red, like
+China, Vietnam, and Cuba, have an oligarchic form of government.<EOS> Countries that
+are colored yellow are monarchies where the people play little part in
+governing.<EOS> 
+
+LINK TO LEARNING<EOS> 
+
+The CIA website provides information about the types of government across the
+world.<EOS> 
+
+Why the Division of Labor Increases Production<EOS> 
+
+When we divide and subdivide the tasks involved with producing a good or
+service, workers and businesses can produce a greater quantity of output.<EOS> In his
+observations of pin factories, Smith noticed that one worker alone might make 20
+pins in a day, but that a small business of 10 workers (some of whom would need
+to complete two or three of the 18 tasks involved with pin-making), could make
+48,000 pins in a day.<EOS> How can a group of workers, each specializing in certain
+tasks, produce so much more than the same number of workers who try to produce
+the entire good or service by themselves?<EOS> Smith offered three reasons.<EOS> 
+
+First, specialization in a particular small job allows workers to focus on the
+parts of the production process where they have an advantage.<EOS> (In later
+chapters, we will develop this idea by discussing comparative advantage.)<EOS> People
+have different skills, talents, and interests, so they will be better at some
+jobs than at others.<EOS> The particular advantages may be based on educational
+choices, which are in turn shaped by interests and talents.<EOS> Only those with
+medical degrees qualify to become doctors, for instance.<EOS> For some goods,
+geography affects specialization.<EOS> For example, it is easier to be a wheat farmer
+in North Dakota than in Florida, but easier to run a tourist hotel in Florida
+than in North Dakota.<EOS> If you live in or near a big city, it is easier to attract
+enough customers to operate a successful dry cleaning business or movie theater
+than if you live in a sparsely populated rural area.<EOS> Whatever the reason, if
+people specialize in the production of what they do best, they will be more
+effective than if they produce a combination of things, some of which they are
+good at and some of which they are not.<EOS> 
+
+Second, workers who specialize in certain tasks often learn to produce more
+quickly and with higher quality.<EOS> This pattern holds true for many workers,
+including assembly line laborers who build cars, stylists who cut hair, and
+doctors who perform heart surgery.<EOS> In fact, specialized workers often know their
+jobs well enough to suggest innovative ways to do their work faster and better.<EOS>
+
+A similar pattern often operates within businesses.<EOS> In many cases, a business
+that focuses on one or a few products (sometimes called its “core competency”)
+is more successful than firms that try to make a wide range of products.<EOS> 
+
+Third, specialization allows businesses to take advantage of economies of scale,
+which means that for many goods, as the level of production increases, the
+average cost of producing each individual unit declines.<EOS> For example, if a
+factory produces only 100 cars per year, each car will be quite expensive to
+make on average.<EOS> However, if a factory produces 50,000 cars each year, then it
+can set up an assembly line with huge machines and workers performing
+specialized tasks, and the average cost of production per car will be lower.<EOS> The
+ultimate result of workers who can focus on their preferences and talents, learn
+to do their specialized jobs better, and work in larger organizations is that
+society as a whole can produce and consume far more than if each person tried to
+produce all of his or her own goods and services.<EOS> The division and
+specialization of labor has been a force against the problem of scarcity.<EOS> 
+
+Hi everyone, welcome back to my channel.<EOS> My name is Katie and today I'm going to
+be talking about my two and a half week long vacation to Portland, Oregon.<EOS> So I
+am from Washington D.C., and I have a bunch of family in Portland, Oregon, so it
+wasn't my first time going there.<EOS> Um but it was definitely my first time, like
+as an adult.<EOS> So that was really exciting and fun.<EOS> I thought that I would make
+sort of like more of an informative video because I could just like post a vlog,
+but um the footage was like so random, and all over the place.<EOS> I got some really
+cool footage but um, not like cute like Instagram girl footage, because I did
+dress like a 12 year old boy the whole time.<EOS> So the first thing that I recommend
+you do in Portland is not actually in Portland at all.<EOS> So you might be like this
+is a terrible list.<EOS> Sorry.<EOS> The number one thing that we did on our trip was we
+actually stayed a night in Eugene, Oregon, and we got up at like the crack of
+dawn and drove to Crater Lake.<EOS> This was incredible.<EOS> Um one of the coolest things
+that I have ever seen.<EOS> The footage that I'm gonna put in here honestly it looks
+a little bit fake.<EOS> This place was incredible.<EOS> We didn't do a whole lot of hiking
+here because there was not a whole lot of cloud coverage that day, and it was so
+hot.<EOS> So what we did was we drove around the entire perimeter of the lake and you
+get all these incredible views of the mountains and the lake, and seeing it from
+all the different angles was so worth it.<EOS> So maybe this is not something that
+you want to do if you're just going to Portland for a couple of days but it's
+definitely something to consider if you're going out to Oregon for a little bit
+longer period of time.<EOS> Number two is shopping.<EOS> These are in no particular order
+by the way.<EOS> They're just sort of like what I thought of as I was making this
+video.<EOS> So there's a lot of cool shopping in Portland, Oregon.<EOS> A lot of cool
+thrifting and vintage stores, a lot of cool art galleries.<EOS> And then one of the
+biggest things that you should check out while you're there is Powell's which is
+a bookstore.<EOS> And I want to say it's like the the biggest like Indie Indie
+bookstore in America.<EOS> I guess that's what it's called.<EOS> I'm gonna – oh, it's the
+world's largest independent bookstore.<EOS> So this place was so cool we could have
+spent hours in here.<EOS> The best thing that I thought about this bookstore was that
+they mixed in new copies of books with used copies.<EOS> So if you're looking for a
+book and you're wondering like – oh I wonder if I could get this used, like it's
+usually right next to it, which I thought was just like so awesome.<EOS> That was
+very exciting for me because I love a used book.<EOS> So I am not a huge like nature
+person.<EOS> Um I don't enjoy bugs.<EOS> But um I will go on a good hike from now and
+again so just like you know where I'm coming from.<EOS> My friend Andrea is a biology
+major so we did stop to look at many slugs that were on the ground and I did
+beeline it away from the slugs.<EOS> But if you like slugs, you're in – you're in
+luck.<EOS> So the first couple days we were in Portland, we went hiking in Forest
+Park which you can get to by public transit in the city.<EOS> It's really quick and
+some of the trails even pop you back out into like the city, so it's – it's
+really super accessible.<EOS> So we did the Wildwood Trail and we also did a tour of
+Pittock Mansion.<EOS> Um if you don't want to do a tour of Pittock Mansion, I'd still
+recommend like taking the trail up there because it has a really cool like
+overlook of the city that you can go see.<EOS> Um I loved doing that.<EOS> So number four
+are the Japanese gardens and the rose gardens in Forest Park.<EOS> I actually don't
+know if they're like technically in Forest Park but they're right in the same
+area.<EOS> So the rose garden is free and open to the public and it is just huge.<EOS>
+It's a lot of roses as you can imagine.<EOS> Um lots of tourists but it was – it was
+still really fun.<EOS> You get to walk through all these gardens and different types
+of roses from different parts of the world and yeah it was just really cool.<EOS>
+Then the Japanese gardens you do have to pay for but I will say that it was
+definitely worth it.<EOS> If it's a clear day you can actually see Mount Hood from
+the Japanese gardens which was really wild, and the garden was just so pretty
+and quiet and serene.<EOS> There were even some people like meditating in there which
+was kind of funny.<EOS> I did wear my bird shirt – It's a pretty good bird shirt, I
+got a compliment on it – which I didn't say this earlier, but I bought this at
+the Audubon Society which I learned what that was.<EOS> I didn't know what that was
+but it's um a society for um like bird watching and bird care and um they had a
+shirt that said bird nerd on it so I bought it because I thought it was funny.<EOS>
+But I was approached by – I want to say – at least three different people who
+asked me if I did bird watching like very seriously.<EOS> 
+
+What's up YouTube?<EOS> So we are going to do a week of me vlogging.<EOS> It's kind of an
+interesting week.<EOS> I bounced around here and there, so I have to kind of show you
+guys around and show you what it's all about, and today I'm on general nuclear
+medicine, so let's start the day.<EOS> So like I said, I'm on my general nuclear
+medicine rotation this week.<EOS> I get switched around -- moved around a few times
+to cover some residents who are on vacation, so I'll be at other spots later
+this week.<EOS> So so far this morning I've just read a few studies (it's a little
+slow in the morning) of general nuclear medicine because a lot of stuff takes
+time for the radio tracers to go into the body or the specific organ we are
+targeting, so we have to wait a little bit in the morning.<EOS> So I've done three
+lymphoscintigraphies.<EOS> For lymphoscintigraphies we basically inject technetium in
+skin surrounding a melanoma and after we inject we wait about 15-20 minutes,
+maybe up to an hour, and wait for that radio tracer to travel to the closest
+lymph node which we would call the sentinel lymph node.<EOS> What we do is we mark it
+under our cameras and then the patient will go up to the OR, have the melanoma,
+a wide excision of the melanoma, and then they will try to find the lymph node
+that we marked and take that one out as well to make sure there's no metastasis.<EOS>
+So I've done three of those this morning.<EOS> I will read a few more scans coming up
+here shortly and just trying to tie up some loose ends before I go to
+conference.<EOS> I'll check back in afterwards.<EOS> Ah, the sun feels so good on the
+face.<EOS> I'm officially done.<EOS> It is about 4:00 p.m.<EOS> We get to head home early today
+because we finished off the scans, and I'm gonna go home and work out because I
+was too lazy to do it this morning because for some reason I was tired from
+having a weekend off, which makes no sense.<EOS> But I'm gonna go work out, cook
+something for dinner and do this all over again tomorrow.<EOS> We're on a different
+rotation tomorrow so stay tuned to find out which one.<EOS> Alright it is day two.<EOS> It
+is Tuesday and today I got pulled to ultrasound.<EOS> Yes, I don't know why I got
+pulled on today, but I did, so probably just sit in there, read some ultrasounds
+and get out early.<EOS> I need to film another YouTube video.<EOS> Alright so I've been
+here just crushing ultrasounds, and today I've been feeling a little under the
+weather so I've been, like, yeah, I've been like crushing these all day today
+and then I'll show you what else I've been.<EOS> I picked these up when I was in
+Amsterdam for ...<EOS> I got sick when I was on Croatia for vacation.<EOS> I have no idea
+what it says, but I think they're cough drops, so if anybody knows what this
+says let me know.<EOS> But I'm pretty sure it's just cough drops with some vitamin C
+in it.<EOS> So this is what I have been doing all day is crushing ultrasounds and
+having Dutch cough drops.<EOS> So if anybody speaks Dutch tell me what that means.<EOS> Oh
+and PS, I usually try to avoid taking medicines that I can't read the name of
+but I had someone help me at the pharmacy in the airport.<EOS> She spoke a little bit
+of English and I think those are actually cough drops, so, that's the only
+reason I'm still eating them today.<EOS> You can tell by my voice it's a little on
+the sore side today so hopefully I get better because, I haven't told you guys
+yet, but I'm going somewhere this weekend and it's gonna be fun.<EOS> Now it's time
+to get back to work.<EOS> So I'm officially going home right now.<EOS> Yeah, normally I
+would go home and work out, especially since it's, like, a beautiful day I would
+probably go running.<EOS> But since I feel kind of crappy today I'm just going to go
+home, hang out, rest (ambulance was a little loud sorry).<EOS> So I'm probably just
+gonna go home and rest and I have to get my hair cut today for my big trip
+coming up.<EOS> But you still don't know where I'm going.<EOS> But yeah that's pretty much
+it, hope you guys don't mind this kind of like random vlog that I'm doing, but I
+just wanted to show you guys kind of loosely like how a week is and the life of
+a radiology resident.<EOS> So hopefully you guys find it somewhat interesting, and if
+you do I'll keep doing it.<EOS> So heading home now.<EOS> 
+
+Athens (Greek: Αθήνα, Athína), is the capital city of Greece with a metropolitan
+population of 3.7 million inhabitants.<EOS> It is in many ways the birthplace of
+Classical Greece, and therefore of Western civilization.<EOS> 
+
+Understand<EOS> 
+
+Old Athens<EOS> 
+
+The first pre-historic settlements was constructed in 3000 BC around the hill of
+Acropolis.<EOS> The legend says that the King of Athens, Theseus unified the ten
+tribes of early Athens into one kingdom (c. 1230 BC).<EOS> This process of
+synoikismos – bringing together in one home – created the largest and wealthiest
+state on the Greek mainland, but it also created a larger class of people
+excluded from political life by the nobility.<EOS> By the 7th century BC, social
+unrest had become widespread, and the Areopagus appointed Draco to draft a
+strict new law code (hence "draconian").<EOS> When this failed, they appointed Solon,
+with a mandate to create a new constitution (594).<EOS> This was the great beginning
+of a new social revolution, which was the result of the democracy under
+Clisthenes (508 BC).<EOS> During the Middle Ages, Athens experienced a decline, but
+re-emerged under Byzantian rule.<EOS> Athens was thriving and prosperous during the
+Crusades, actually benefiting from the Italian trade during this period.<EOS>
+However, this fruitful period was short-lived, as Greece suffered badly under
+the Ottoman Empire, only to recover in the 19th century as the capital of
+independent Greece.<EOS> 
+
+Modern Olympic Games<EOS> 
+
+Athens hosted the 2004 Summer Olympic Games.<EOS> While most of the sporting venues
+were located outside the city proper - in various locations throughout Attica -
+the entire urban area of Athens underwent major lasting changes that have
+improved the quality of life for visitors and residents alike.<EOS> Aside from the
+excellent transportation infrastructure that was completed in time for the 2004
+Olympics (from new freeways to light rail systems), the city's historic center
+underwent serious renovation.<EOS> Most notable among the city's facelift projects
+are the Unification of Archaeological Sites - which connects the city's
+classical - era ruins and monuments to each other through a network of pleasant
+pedestrianized streets - and the restoration of the picturesque neoclassical
+Thissio and Pláka districts.<EOS> 
+
+The ancient Olympic Games took place in Olympia from 776 BCE to 394 AD.<EOS> It is a
+lengthy day trip from Athens to visit Olympia, but quite interesting.<EOS> 
+
+Architecture<EOS> 
+
+Athens was just a small provincial village when it was chosen in the 1830s to
+serve as the national capital of the modern Greek State.<EOS> Although it had a
+prestigious past, the city's political, economic, and cultural importance had
+declined over the centuries, leaving behind only its classical ruins as a
+reminder of better times.<EOS> With the decision to move the national capital from
+Nafplio to Athens, architects and city planners were hired to build a new city
+next to the classical ruins, with grand neoclassical homes and public buildings,
+large city squares, green spaces, and wide avenues, making a conscious, decisive
+turn from the city's Ottoman past.<EOS> The city regained its importance in Greek
+civilization, and by 1900 had evolved into a very attractive cosmopolitan city,
+with abundant neoclassical architecture harking to the nation's past.<EOS> 
+
+The 20th century however, marked the rapid development of Athens.<EOS> The city
+suffered minor damage during WWII, and suffered extensive urban planning in the
+decades that followed, as the nation rapidly industrialized and urbanized.<EOS> In
+the 1960s and 1970s, many 19th century neoclassical buildings, often small and
+private, were demolished to make way for office buildings, often designed by
+great Greek architects.<EOS> The city also expanded outward through rash development,
+particularly towards the west, as its population grew by absorbing job-seekers
+from the provinces.<EOS> With the onset of the automobile, public officials reduced
+the city's public transportation services without foreseeing the traffic
+gridlock and smog that would menace the city by the 1980s.<EOS> 
+
+By the late 1980s and early 1990s, the city's reality led to a rude awakening
+among local and national officials and, coupled with the country's new found
+remarkable prosperity, large scale projects began to slowly regenerate the city
+and undo some of the damages of recent decades.<EOS> Over the course of the next 15
+years, money was poured into new transportation infrastructure projects, the
+restoration of surviving neoclassical buildings, the gentrification of the
+city's historical center and the renovation of many former industrial areas and
+the city's coastline.<EOS> The restoration of charming neoclassical buildings in the
+city's historical center has been accompanied by the construction of attractive
+post-modern buildings in newer districts; both of which have begun to improve
+the aesthetic essence of the city.<EOS> Athens today is ever evolving, forging a
+brand new identity for the 21st century.<EOS> 
+
+Climate<EOS> 
+
+Spring and late autumn are the best times to visit Athens.<EOS> Summer can be
+extremely hot and dry during heatwaves, but this rarely happens.<EOS> Winter is
+definitely low season, with the occasional rainy or snowy day, but also an ideal
+time to save money while enjoying the city without countless other travelers and
+tourists.<EOS> 
+
+Whilst peak traffic hour can be a bit smoggy on the main roads, on most sunny
+days the skies are azure blue.<EOS> The main reason attributed for the pollution of
+Athens is because the city is enclosed by mountains in a basin which does not
+let the smog leave.<EOS> The government's ban on diesel vehicles within Athens and
+the early 1990s initiatives to improve car emissions have greatly contributed to
+better atmospheric conditions in the basin.<EOS> 
+
+Coron<EOS> 
+
+Coron is in the province of Palawan, Philippines on Busuanga Island.<EOS> It is the
+largest town on the island and has the largest share of accommodations.<EOS> 
+
+Background<EOS> 
+
+Coron is both the name of the largest town on the island of Busuanga, and the
+name of a different, smaller island just offshore.<EOS> The area is famous for its
+World War II wreck diving, and the site has been named in many lists of top dive
+spots in the world.<EOS> In September 1944, a fleet of Japanese ships hiding in the
+harbor were sunk in a daring raid by the US navy.<EOS> The result is around ten well
+preserved underwater shipwrecks surrounded with coral reef.<EOS> 
+
+There are also attractions on Coron Island itself.<EOS> There are many beautiful
+white sand beaches, mostly tiny and surrounded by large limestone cliffs and
+wildlife.<EOS> Barracuda and Kayangan lakes are both stunning locations, and good for
+snorkeling, and the island is the ancestral domain of an indigenous tribe who
+are managing the island in a sustainable way and keeping outsiders at a distance
+and offshore at night.<EOS> 
+
+History<EOS> 
+
+The first inhabitants of Coron were the Tagbanuas who belong to the second wave
+of Indonesians who migrated to this area some 5,000 years ago.<EOS> They were a
+nomadic, seafaring people, living mainly by fishing and subsistence agriculture.<EOS>
+Although they are now sedentary (with the young using cell phones, etc.), they
+maintain many of their old customs, traditions and beliefs.<EOS> Today, the Tagbanuas
+remain the dominant if not entire population of Coron.<EOS> 
+
+In 1902 that Coron was registered as a town and the name of the town was
+officially changed from Penon de Coron to Coron.<EOS> 
+
+From 1939 to the outbreak of World War II, the municipality experienced the
+mining boom.<EOS> Labor shifted from farming to mining.<EOS> In July 1942 the Japanese
+occupied the mining camps and resumed operation of the manganese mines.<EOS> On
+September 24, 1944, a group of Japanese ships were sunk by American warplanes in
+Coron waters as the ships retreated from Manila Bay.<EOS> To this day, about 10 or 12
+of these World War II Japanese shipwrecks comprise what is considered one of the
+best dive sites in the world.<EOS> 
+
+In 1947, large scale deep sea fishing was introduced to Coron, and the town
+experienced another boom, a fishing boom.<EOS> The population increased, as many
+people from Luzon and the Visayas came to work either as fishermen or miners.<EOS> 
+
+On June 17, 1950, Busuanga was officially created as a separate municipality
+from Coron and in 1954, Coron was further reduced by the official creation of
+the Municipality of Linapacan.<EOS> On September 12, 1992, Coron was finally reduced
+by the official creation of the Municipality of Culion.<EOS> 
+
+In the past, Coron was virtually unknown outside of Palawan.<EOS> It remains a small,
+quaint fishing town with laid back charm but with increasing media exposure it
+is growing, slowly but steadily,<EOS> Coron has taken an important position in the
+tourism industry.<EOS> In the past decade, there has been a rapid influx of scuba
+divers and other tourists coming in, making tourism the major industry player in
+Coron today.<EOS> 
+
+How to Tell a Joke<EOS> 
+
+Two Parts:<EOS> Getting the Material Right<EOS> Getting the Delivery Right<EOS> 
+
+From one-liners to classic three-liners to the one-minute gag you tell your
+friends, a good joke pleases everyone.<EOS> Joke-telling is one of the best ways to
+ease tension, make a new friend, or light up a room.<EOS> That is, of course, if you
+can get a laugh.<EOS> Telling good jokes is an art that comes naturally to some
+people, but for others it takes practice and hard work.<EOS> 
+
+Part 1 of 2:<EOS> Getting the Material Right<EOS> 
+
+Know your audience.<EOS> All aspects of the joke you tell, from the content to the
+length, need to be suited to your audience.<EOS> What’s funny to a group of 20-year
+old college students may be very different from what makes your 70-year
+old-uncle laugh (then again, maybe not).<EOS> 
+
+Everyone’s an individual, so there are no hard and fast rules.<EOS> But, unless you
+personally know the members of your audience, here are some good rules of thumb
+to follow:<EOS> elderly people won’t like crude jokes;<EOS> stay away from misogynist
+jokes if you’ve got an audience full of women;<EOS> people of a specific ethnic or
+racial group won’t enjoy jokes making fun of their group;<EOS> and jokes requiring
+specialized knowledge (of, for example, science or old movies) will only be
+appreciated by people who possess that knowledge.<EOS> 
+
+The more you know about your audience the better you’ll be able to tailor your
+jokes to them.<EOS> 
+
+Choose great material.<EOS> You can find fodder lots of places — from your life, joke
+files online, by repurposing jokes you’ve heard in the past, and so on.<EOS> 
+
+You may want to start your own joke file.<EOS> You can write your jokes down on index
+cards to keep them handy or use a document file on your computer. [1]<EOS> The latter
+option may allow for easier revision.<EOS> 
+
+Decide on a target.<EOS> Every joke has a “target,” which is what the joke is about.<EOS>
+It’s important that the joke’s target (the most basic element of your material)
+be suited to your audience.<EOS> Make sure it’s a target your audience will be
+interested in and something they’re likely willing to laugh at. [2]<EOS> 
+
+For example, husbands are likely to laugh at jokes about wives and vice versa;<EOS>
+students will typically find jokes about school and teachers humorous.<EOS> 
+
+Have a realistic but exaggerated setup.<EOS> The opening of the joke — or setup —
+should have a basis in the real world so your audience can relate to it, but it
+should also include exaggeration because this is what gives a joke its humorous
+edge. [3]<EOS> 
+
+Think of the setup as the foundation of a story.<EOS> It’s a fundamental part of the
+joke;<EOS> if you don’t lay a good foundation here, then the punchline won’t make
+sense to the audience or they won’t find it humorous.<EOS> 
+
+Your setup needs to be both realistic and exaggerated in order to be funny —<EOS>
+it’s placing these two incongruous elements side by side that makes the joke
+funny. [4]<EOS> 
+
+The exaggeration can be slight or considerable —<EOS> it just depends on the
+individual joke.<EOS> 
+
+Surprise with the punchline.<EOS> The ending of the joke is obviously crucial.<EOS> This
+is where the payoff comes in, what makes the joke succeed or fail.<EOS> If you want
+to make the audience laugh, your punchline needs to be surprising.<EOS> 
+
+Some jokes also have what is called a tag or topper, which is an additional
+punchline.<EOS> The tag builds on the original punchline or twists back on it in a
+surprising way.<EOS> 
+
+Make the joke your own.<EOS> Lots of jokes rehash the same ground and sometimes they
+retell a story countless other jokes have told.<EOS> For your joke to be funny, it
+has to surprise the audience in some way, which means it has to seem original or
+new.<EOS> 
+
+One way to personalize a joke is to change the ending. [5]<EOS> 
+
+Another option is to dress the joke up as a story about your own life.<EOS> This will
+make a familiar joke unrecognizable.<EOS> It may also make it particularly
+interesting if your audience is your friend(s). [6]<EOS> 
+
+Know your material.<EOS> Practicing your joke is crucial.<EOS> You don’t need to have it
+completely memorized — in fact, you "shouldn’t" memorize it — but you need to be
+really comfortable with it, so comfortable that you can continue on with telling
+it even if you get nervous or sidetracked, which is very possible once you’re in
+front of an audience.<EOS> 
+
+Memorized jokes sound wooden, like they are being read off a script instead of
+relayed by a friend or entertainer.<EOS> 
+
+Good jokes have a lot of details and personality, so don’t be afraid to
+embellish. [7]<EOS> Try different things out and see what feels right, what sounds
+best.<EOS> Don’t use a joke until you’re completely comfortable with it.<EOS> 
+
+Try recording your joke on a tape player and playing it back to yourself.<EOS> If you
+hear a lot of awkward pauses or “ah”s or “um”s, your joke isn’t ready and you
+need to practice more. [8]<EOS> You can also try practicing in front of a sympathetic
+friend or family member once you’re ready for a “real” audience.<EOS> 
+
+How to Wash Overalls in a Washing Machine<EOS> 
+
+Whether you are a working man or just a little cutie trying to stay cute, those
+overalls are going to need washing sooner or later.<EOS> The straps on adults’
+overalls often get so twisted during the wash that one wishes she had just used
+an old fashioned washboard instead.<EOS> Your appliances are also murder on the
+straps, which are almost always the first things to wear out on your overalls.<EOS>
+This article will show you how to save time and prevent wear, extending the life
+of your overalls until they are so soft you could wear them to bed.<EOS> 
+
+Steps<EOS> 
+
+Wash alone or with "like" clothing.<EOS> It’s best to wash adults’ overalls alone,
+especially men’s.<EOS> However, it is okay to wash just a few items with them, like
+blue jeans.<EOS> What you don’t want to wash with them is anything that can get
+twisted up with the straps, like women’s long sleeve shirts or kids’ blankets.<EOS>
+Think similar clothing, minus the twisty-ness.<EOS> Just do the denim and canvas
+stuff together.<EOS> 
+
+Fasten the straps to the bib.<EOS> If you didn’t know already, the bib is the top
+front part with the breast pockets.<EOS> Go ahead and fasten both straps before you
+wash.<EOS> This will help keep them from twisting up during the wash.<EOS> 
+
+Use twist ties to keep the straps fastened.<EOS> This step will reapportion years of
+your life in the long run.<EOS> Don’t skip it.<EOS> Take the 20 seconds to use a couple
+twist ties on the fasteners to make sure they don’t come loose.<EOS> If your washing
+machine is worth its salt, it will undo those straps in a heartbeat and tie them
+in a sheet bend unless you prevent it.<EOS> All it takes is two twist ties and a few
+seconds of patience.<EOS> 
+
+Empty the pockets.<EOS> Overalls have more pockets than pants.<EOS> The bib has a wallet
+pocket and a watch pocket.<EOS> Kids put rocks, candy, and bugs in these.<EOS> Men put
+cell phones and small tools in them.<EOS> Women defy the laws of purse-space, so when
+it comes to bib pockets, the sky is the limit.<EOS> Make sure all the pockets are
+empty.<EOS> 
+
+Move the strap adjusters around.<EOS> You’ve probably got them just the way you like
+them, but if you move the adjusters up or down on the straps occasionally, the
+straps will last longer.<EOS> Depending on the adjusters, you may be able to leave
+them a little loose too.<EOS> The straps wear out fastest around the adjusters over
+the course of numerous wash and dry cycles (not to mention being out in the
+elements if they are work clothes).<EOS> Moving them distributes the wear and tear of
+washing.<EOS> This is the same idea as rotating tires.<EOS> You know about rotating your
+tires, don't you?<EOS> 
+
+Tips<EOS> 
+
+If you wash your overalls alone or in a light load, use about half the detergent
+called for and less water.<EOS> 
+
+Leave the straps fastened and twist-tied to the bib when you throw them in the
+dryer.<EOS> This will cut down on some of the racket, but you're still going to hear
+them.<EOS> 
+
+Warnings<EOS> 
+
+The paper-type twist ties will deteriorate a little, but the dryer filter screen
+will catch the fallout.<EOS> 
+
+Plastic-type twist ties will hold up in the wash, but may or may not melt in
+your dryer.<EOS> Use with caution.<EOS> 

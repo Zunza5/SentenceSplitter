@@ -129,12 +129,14 @@ def train_sentence_mlp(
         batch_size=batch_size,
         shuffle=True,
         collate_fn=cached_collate_fn,
+        num_workers=4,
     )
     dev_loader = DataLoader(
         dev_ds,
         batch_size=batch_size,
         shuffle=False,
         collate_fn=cached_collate_fn,
+        num_workers=2,
     )
 
     print(f"Train samples: {len(train_ds)}, Dev samples: {len(dev_ds)}")

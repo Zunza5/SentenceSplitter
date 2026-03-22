@@ -21,25 +21,47 @@ from transformers import AutoTokenizer
 import conllu
 
 # ── UD Treebank URLs ──────────────────────────────────────────────────────────
+# ── UD Treebank URLs ──────────────────────────────────────────────────────────
 UD_URLS = {
-    "train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ISDT/master/it_isdt-ud-train.conllu",
-    "dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ISDT/master/it_isdt-ud-dev.conllu",
-    "test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ISDT/master/it_isdt-ud-test.conllu",
-    "test2": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-test.conllu",
-    "train2": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-train.conllu",
-    "dev2": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-dev.conllu",
-    "engTrain": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-train.conllu",
-    "engDev": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-dev.conllu",
-    "engTest": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/master/en_ewt-ud-test.conllu",
-    "test3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-test.conllu",
-    "train3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-train.conllu",
-    "dev3": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-VIT/refs/heads/master/it_vit-ud-dev.conllu",
-    "test4": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-test.conllu",
-    "train4": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-train.conllu",
-    "dev4": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-dev.conllu",
-    "train5": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParTUT/refs/heads/master/it_partut-ud-train.conllu",
-    "test5": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParTUT/refs/heads/master/it_partut-ud-test.conllu",
-    "dev5": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParTUT/refs/heads/master/it_partut-ud-dev.conllu",
+    # Italian
+    "it-isdt-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-ISDT" / "it_isdt-ud-train.sent_split"),
+    "it-isdt-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-ISDT" / "it_isdt-ud-dev.sent_split"),
+    "it-isdt-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-ISDT" / "it_isdt-ud-test.sent_split"),
+    
+    "it-vit-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-VIT" / "it_vit-ud-train.sent_split"),
+    "it-vit-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-VIT" / "it_vit-ud-dev.sent_split"),
+    "it-vit-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-VIT" / "it_vit-ud-test.sent_split"),
+    
+    "it-partut-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-ParTUT" / "it_partut-ud-train.sent_split"),
+    "it-partut-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-ParTUT" / "it_partut-ud-dev.sent_split"),
+    "it-partut-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-ParTUT" / "it_partut-ud-test.sent_split"),
+    
+    "it-markit-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-MarkIT" / "it_markit-ud-train.sent_split"),
+    "it-markit-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-MarkIT" / "it_markit-ud-dev.sent_split"),
+    "it-markit-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_Italian-MarkIT" / "it_markit-ud-test.sent_split"),
+
+    "it-postwita-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-train.conllu",
+    "it-postwita-dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-dev.conllu",
+    "it-postwita-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PoSTWITA/refs/heads/master/it_postwita-ud-test.conllu",
+    
+    "it-twittiro-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-train.conllu",
+    "it-twittiro-dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-dev.conllu",
+    "it-twittiro-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-test.conllu",
+
+    # English
+    "en-ewt-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-train.sent_split"),
+    "en-ewt-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-dev.sent_split"),
+    "en-ewt-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-test.sent_split"),
+    
+    "en-gum-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-GUM" / "en_gum-ud-train.sent_split"),
+    "en-gum-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-GUM" / "en_gum-ud-dev.sent_split"),
+    "en-gum-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-GUM" / "en_gum-ud-test.sent_split"),
+    
+    "en-partut-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-ParTUT" / "en_partut-ud-train.sent_split"),
+    "en-partut-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-ParTUT" / "en_partut-ud-dev.sent_split"),
+    "en-partut-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-ParTUT" / "en_partut-ud-test.sent_split"),
+
+    "en-pud-test": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-PUD" / "en_pud-ud-test.sent_split"),
 }
 
 CACHE_DIR = Path(__file__).parent.parent / "data_cache"
@@ -67,6 +89,71 @@ def parse_conllu(path: Path) -> list[list[str]]:
         words = [tok["form"] for tok in sent if isinstance(tok["id"], int)]
         sentences.append(words)
     return sentences
+
+
+def parse_sent_split(path: Path) -> list[list[str]]:
+    """Parse a .sent_split file where sentences are separated by <EOS>."""
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # Split by <EOS> and strip
+    raw_sentences = [s.strip() for s in content.split("<EOS>")]
+    raw_sentences = [s for s in raw_sentences if s]
+    
+    # Each sentence is a list of words
+    sentences = [sentence.split() for sentence in raw_sentences]
+    return sentences
+
+
+def get_sentences_for_split(split: str) -> list[list[str]]:
+    """
+    Get sentences for a given split.
+    Priority:
+    1. If `split` is an existing file path -> load directly.
+    2. If `split` is in `UD_URLS`:
+       a. If `UD_URLS[split]` is an existing local file -> load it.
+       b. If a matching `.sent_split` exists in `sent_split_data` (derived from URL) -> load it.
+       c. Otherwise -> download `.conllu` and parse.
+    3. If `split` matches a filename in `sent_split_data` -> load it.
+    """
+    
+    # 1. Direct path check
+    p = Path(split)
+    if p.exists() and p.is_file():
+        return parse_sent_split(p) if p.suffix == ".sent_split" else parse_conllu(p)
+
+    # 2. UD_URLS check
+    if split in UD_URLS:
+        url_or_path = UD_URLS[split]
+        path_in_urls = Path(url_or_path)
+        
+        # a. Local path in UD_URLS
+        if path_in_urls.exists() and path_in_urls.is_file():
+            print(f"Loading local file from UD_URLS['{split}']: {path_in_urls}")
+            return parse_sent_split(path_in_urls) if path_in_urls.suffix == ".sent_split" else parse_conllu(path_in_urls)
+            
+        # b. Mapping to sent_split_data (for URLs)
+        if url_or_path.startswith("http"):
+            parts = url_or_path.split('/')
+            folder_name = parts[-3]
+            filename = parts[-1]
+            local_sent_split = Path(__file__).parent.parent / "sent_split_data" / folder_name / filename.replace(".conllu", ".sent_split")
+            if local_sent_split.exists():
+                print(f"Found mapped sent_split for '{split}': {local_sent_split}")
+                return parse_sent_split(local_sent_split)
+        
+        # c. Fallback to download conllu
+        conllu_file = download_ud_file(split)
+        return parse_conllu(conllu_file)
+            
+    # 3. Fuzzy search in sent_split_data
+    sent_split_dir = Path(__file__).parent.parent / "sent_split_data"
+    matches = list(sent_split_dir.rglob(f"*{split}*.sent_split"))
+    if matches:
+        print(f"Matching local file found for '{split}': {matches[0]}")
+        return parse_sent_split(matches[0])
+        
+    raise ValueError(f"Could not find dataset for '{split}'.")
 
 
 def make_char_labels(words: list[str]) -> tuple[str, str, list[int]]:
@@ -167,20 +254,9 @@ class WordSplitDataset(Dataset):
         tokenizer: Optional[AutoTokenizer] = None,
         max_chars: int = 512,
     ):
-        assert split in ("train", "dev", "test", "test2", "train2", "dev2", "engTrain", "engDev", "engTest", "test3", "train3", "dev3"), f"Invalid split: {split}"
-
-        # Load and parse UD data
-        path = download_ud_file(split)
-        self.sentences = parse_conllu(path)
-
-        if split == "engTrain":
-            self.sentences = self.sentences[:2773]
-        elif split == "engDev":
-            self.sentences = self.sentences[:185]
-        elif split == "engTest":
-            self.sentences = self.sentences[:173]
-        
-
+        # Remove restrictive split whitelist
+        # Load and parse data (will use local .sent_split if available)
+        self.sentences = get_sentences_for_split(split)
 
         # Tokenizer
         if tokenizer is None:

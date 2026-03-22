@@ -154,8 +154,8 @@ Examples:
     train_parser.add_argument("--dropout", type=float, default=0.2)
     train_parser.add_argument("--pos-weight", type=float, default=0.2)
     train_parser.add_argument("--extract-batch-size", type=int, default=16)
-    train_parser.add_argument("--train-splits", type=str, default="train,train2,train3,train4,train5,engTrain", help="Comma-separated list of training splits")
-    train_parser.add_argument("--dev-splits", type=str, default="dev,dev2,dev3,dev4,dev5,engDev", help="Comma-separated list of dev splits")
+    train_parser.add_argument("--train-splits", type=str, default="it-isdt-train,it-postwita-train,it-vit-train,it-twittiro-train,it-partut-train,it-markit-train,en-ewt-train,en-gum-train,en-partut-train", help="Comma-separated list of training splits")
+    train_parser.add_argument("--dev-splits", type=str, default="it-isdt-dev,it-postwita-dev,it-vit-dev,it-twittiro-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev", help="Comma-separated list of dev splits")
 
     # ── split ──
     split_parser = subparsers.add_parser("split", help="Split spaceless text")
@@ -165,7 +165,7 @@ Examples:
     # ── eval ──
     eval_parser = subparsers.add_parser("eval", help="Evaluate on test set")
     eval_parser.add_argument("--batch-size", type=int, default=32)
-    eval_parser.add_argument("--test-splits", type=str, default="test", help="Comma-separated list of test splits")
+    eval_parser.add_argument("--test-splits", type=str, default="it-isdt-test,it-postwita-test,it-vit-test,it-twittiro-test,it-partut-test,it-markit-test,en-ewt-test,en-gum-test,en-partut-test,en-pud-test", help="Comma-separated list of test splits")
 
     args = parser.parse_args()
 

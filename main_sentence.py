@@ -75,19 +75,19 @@ def main():
     train_parser = subparsers.add_parser("train")
     train_parser.add_argument("--phase", choices=["extract", "train", "both"], default="both")
     train_parser.add_argument("--epochs", type=int, default=50)
-    train_parser.add_argument("--batch-size", type=int, default=16)
+    train_parser.add_argument("--batch-size", type=int, default=8)
     train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--dropout", type=float, default=0.2)
-    train_parser.add_argument("--pos-weight", type=float, default=0.8)
+    train_parser.add_argument("--pos-weight", type=float, default=0.5)
     train_parser.add_argument("--augment-prob", type=float, default=0.0)
     train_parser.add_argument("--extract-batch-size", type=int, default=8)
-    train_parser.add_argument("--train-splits", type=str, default="train,train2,train3,train4,train5,engTrain")
-    train_parser.add_argument("--dev-splits", type=str, default="dev,engDev,dev2,dev3,dev4,dev5")
+    train_parser.add_argument("--train-splits", type=str, default="it-isdt-train,it-vit-train,it-partut-train,it-markit-train,en-ewt-train,en-gum-train,en-partut-train")
+    train_parser.add_argument("--dev-splits", type=str, default="it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev")
 
     # eval
     eval_parser = subparsers.add_parser("eval")
     eval_parser.add_argument("--batch-size", type=int, default=16)
-    eval_parser.add_argument("--test-splits", type=str, default="test,test2,test3,test4,test5,engTest")
+    eval_parser.add_argument("--test-splits", type=str, default="it-isdt-test,it-postwita-test,it-vit-test,it-twittiro-test,it-partut-test,it-markit-test,en-ewt-test,en-gum-test,en-partut-test,en-pud-test")
 
     # split
     split_parser = subparsers.add_parser("split")
