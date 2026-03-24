@@ -7,6 +7,7 @@ Phase 2: Train the MLP on cached embeddings.
 
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -141,6 +142,7 @@ def train_mlp(
     dropout: float = 0.2,
     pos_weight: float = 2.0,
     patience: int = 7,
+    aux_weight: float = 0.01,
     train_splits: list[str] = None,
     dev_splits: list[str] = None,
 ):
@@ -178,6 +180,7 @@ def train_mlp(
     )
 
     print(f"Train samples: {len(train_ds)}, Dev samples: {len(dev_ds)}")
+    print(f"MoE aux_weight: {aux_weight}")
 
     # Model
     mlp = SpacePredictorMLP(hidden_dim=hidden_dim, dropout=dropout).to(device)
@@ -198,27 +201,32 @@ def train_mlp(
         total_loss = 0.0
         num_batches = 0
 
-        for batch in train_loader:
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
+        for batch in pbar:
             emb = batch["char_embeddings"].to(device)
             labels = batch["char_labels"].to(device)
             mask = batch["char_mask"].to(device)
 
-            preds = mlp(emb)  # (batch, seq_len)
+            preds, moe_aux_loss = mlp(emb, mask=mask)
 
             # Compute loss only on valid positions
             loss_all = criterion(preds, labels)
 
             # Apply positive weighting
             weight = torch.where(labels == 1, pos_weight, 1.0)
-            loss_masked = (loss_all * weight * mask.float()).sum() / mask.float().sum()
+            bce_loss = (loss_all * weight * mask.float()).sum() / mask.float().sum()
+
+            # Total loss = BCE + load-balancing auxiliary loss
+            loss_total = bce_loss + aux_weight * moe_aux_loss
 
             optimizer.zero_grad()
-            loss_masked.backward()
+            loss_total.backward()
             torch.nn.utils.clip_grad_norm_(mlp.parameters(), max_norm=1.0)
             optimizer.step()
 
-            total_loss += loss_masked.item()
+            total_loss += loss_total.item()
             num_batches += 1
+            pbar.set_postfix({"loss": f"{loss_total.item():.4f}", "aux": f"{moe_aux_loss.item():.3f}"})
 
         avg_loss = total_loss / max(num_batches, 1)
 
@@ -245,6 +253,7 @@ def train_mlp(
                     "model_state_dict": mlp.state_dict(),
                     "hidden_dim": hidden_dim,
                     "dropout": dropout,
+                    "aux_weight": aux_weight,
                     "epoch": epoch,
                     "f1": best_f1,
                 },
@@ -277,10 +286,12 @@ def evaluate(
 
     for batch in dataloader:
         emb = batch["char_embeddings"].to(device)
-        labels = batch["char_labels"]
-        mask = batch["char_mask"]
+        char_mask = batch["char_mask"].to(device)
+        labels = batch["char_labels"].cpu()
+        mask = batch["char_mask"].cpu()
 
-        preds = model(emb).cpu()
+        preds, _ = model(emb, mask=char_mask)
+        preds = preds.cpu()
         texts = batch.get("spaceless", [""] * preds.shape[0])
 
         # Collect valid predictions
@@ -349,6 +360,7 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--pos-weight", type=float, default=2.0)
     parser.add_argument("--patience", type=int, default=7, help="Early stopping patience")
+    parser.add_argument("--aux-weight", type=float, default=0.01, help="Weight for MoE load-balancing loss")
     parser.add_argument(
         "--extract-batch-size",
         type=int,
@@ -369,4 +381,5 @@ if __name__ == "__main__":
             dropout=args.dropout,
             pos_weight=args.pos_weight,
             patience=args.patience,
+            aux_weight=args.aux_weight,
         )

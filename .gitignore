@@ -9,3 +9,7 @@ __pycache__/
 *_cache/
 
 .DS_Store
+
+.env
+
+*data/

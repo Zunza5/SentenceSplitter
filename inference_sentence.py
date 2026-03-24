@@ -27,6 +27,8 @@ def split_into_sentences(
     device: torch.device,
     backend: str = "transformers",
     threshold: float = 0.5,
+    max_chars: int = 2048,
+    stride_chars: int = 1024,
 ) -> list[str]:
     """
     Split a continuous text into a list of sentences using the MLP.
@@ -42,17 +44,38 @@ def split_into_sentences(
     from data_sentence import build_sentence_char_to_token_map
     from wordSplitter.embeddings import extract_token_embeddings, expand_to_char_embeddings
     
-    # Custom prediction for sentence splitting (preserves spaces)
-    input_ids, char_to_token = build_sentence_char_to_token_map(text, tokenizer)
+    probs_sum = [0.0] * len(text)
+    probs_count = [0] * len(text)
     
-    input_ids_t = torch.tensor([input_ids], dtype=torch.long, device=device)
-    attention_mask = torch.ones_like(input_ids_t)
-    char_to_token_t = torch.tensor([char_to_token], dtype=torch.long, device=device)
-    
-    tok_emb = extract_token_embeddings(llm_model, input_ids_t, attention_mask, backend=backend)
-    char_emb = expand_to_char_embeddings(tok_emb, char_to_token_t)
-    
-    probs = mlp(char_emb).squeeze(0).cpu().tolist()
+    start = 0
+    while start < len(text):
+        end = min(start + max_chars, len(text))
+        chunk_text = text[start:end]
+        
+        input_ids, char_to_token = build_sentence_char_to_token_map(chunk_text, tokenizer)
+        
+        input_ids_t = torch.tensor([input_ids], dtype=torch.long, device=device)
+        attention_mask = torch.ones_like(input_ids_t)
+        char_to_token_t = torch.tensor([char_to_token], dtype=torch.long, device=device)
+        
+        tok_emb = extract_token_embeddings(llm_model, input_ids_t, attention_mask, backend=backend)
+        char_emb = expand_to_char_embeddings(tok_emb, char_to_token_t)
+        
+        chunk_probs, _ = mlp(char_emb)
+        chunk_probs = chunk_probs.squeeze(0).cpu().tolist()
+        
+        for i, p in enumerate(chunk_probs):
+            if start + i < len(text):
+                probs_sum[start + i] += p
+                probs_count[start + i] += 1
+                
+        if end == len(text):
+            break
+            
+        start += stride_chars
+
+    # Average probabilities
+    probs = [s / max(1, c) for s, c in zip(probs_sum, probs_count)]
     
     sentences = []
     current_sent = ""

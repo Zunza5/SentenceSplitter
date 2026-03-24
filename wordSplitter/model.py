@@ -89,11 +89,104 @@ class MultiScaleConv1d(nn.Module):
         return self.spatial_dropout(merged)
 
 
+class ExpertBlock(nn.Module):
+    """
+    Single Transformer expert with residual connection and layer norm.
+    Uses nn.TransformerEncoderLayer for a standard self-attention + FFN block.
+    """
+    def __init__(self, d_model: int, nhead: int = 4, dropout: float = 0.1):
+        super().__init__()
+        self.transformer_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=d_model * 4,
+            dropout=dropout,
+            batch_first=True,
+            activation="gelu",
+        )
+        self.norm = nn.LayerNorm(d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (batch, seq_len, d_model)
+        out = self.transformer_layer(x)
+        return self.norm(out + x)  # residual + norm
+
+
+class MoELayer(nn.Module):
+    """
+    Mixture of Experts layer with 2 Transformer experts and a learned router.
+
+    The router produces per-token gating weights via softmax over 2 logits.
+    Both experts process the full input (no sparse routing) and outputs are
+    combined as a weighted sum. An auxiliary load-balancing loss encourages
+    even distribution of tokens across experts.
+    """
+    NUM_EXPERTS = 2
+
+    def __init__(self, d_model: int, nhead: int = 4, dropout: float = 0.1):
+        super().__init__()
+        self.router = nn.Linear(d_model, self.NUM_EXPERTS)
+        self.experts = nn.ModuleList([
+            ExpertBlock(d_model, nhead=nhead, dropout=dropout)
+            for _ in range(self.NUM_EXPERTS)
+        ])
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
+        """
+        Args:
+            x: (batch, seq_len, d_model)
+            mask: (batch, seq_len) bool, True for valid positions
+        Returns:
+            output: (batch, seq_len, d_model) — weighted expert mixture
+            aux_loss: scalar — load-balancing loss
+        """
+        # Router gating probabilities: (batch, seq_len, num_experts)
+        gate_logits = self.router(x)
+        gate_probs = F.softmax(gate_logits, dim=-1)
+
+        # Run all experts
+        expert_outputs = torch.stack(
+            [expert(x) for expert in self.experts], dim=-1
+        )  # (batch, seq_len, d_model, num_experts)
+
+        # Weighted combination: gate_probs[:,:,i] weights expert i
+        # gate_probs: (B, S, E) -> (B, S, 1, E) for broadcasting
+        gate_weights = gate_probs.unsqueeze(2)  # (B, S, 1, E)
+        output = (expert_outputs * gate_weights).sum(dim=-1)  # (B, S, d_model)
+
+        # ── Load-balancing auxiliary loss (Switch Transformer style) ──────
+        # f_i = fraction of tokens dispatched to expert i (based on argmax)
+        # P_i = mean router probability for expert i
+        # L_balance = num_experts * sum(f_i * P_i)
+        if mask is not None:
+            # Only consider valid (non-padding) positions
+            valid_probs = gate_probs[mask]  # (num_valid, num_experts)
+        else:
+            valid_probs = gate_probs.reshape(-1, self.NUM_EXPERTS)
+
+        # f_i: fraction of tokens where expert i has the highest gate
+        assignments = valid_probs.argmax(dim=-1)  # (num_valid,)
+        f = torch.zeros(self.NUM_EXPERTS, device=x.device)
+        for i in range(self.NUM_EXPERTS):
+            f[i] = (assignments == i).float().mean()
+
+        # P_i: mean probability assigned to expert i
+        P = valid_probs.mean(dim=0)  # (num_experts,)
+
+        aux_loss = self.NUM_EXPERTS * (f * P).sum()
+
+        return output, aux_loss
+
+
 class SpacePredictorMLP(nn.Module):
     """
-    Lightweight model for character-level sentence boundary prediction.
-    Combines Qwen embeddings and Multi-Scale CNNs. 
-    Self-Attention removed to prevent overfitting on small datasets.
+    Character-level space prediction model with Mixture of Experts.
+    
+    Architecture:
+      1. Multi-scale CNN extracts local features at different receptive fields
+      2. MoE layer: a router dispatches CNN features to 2 Transformer experts
+         (4 heads each) and combines their outputs via learned gating
+      3. Classifier head produces per-character binary predictions
     """
     def __init__(self, hidden_dim: int = 2048, cnn_dim: int = 256, dropout: float = 0.3):
         super().__init__()
@@ -101,7 +194,6 @@ class SpacePredictorMLP(nn.Module):
         self.hidden_dim = hidden_dim
         
         # 1. Residual Projection
-        # Projects original LLM embeddings to match CNN output dimension
         self.residual_proj = nn.Linear(hidden_dim, cnn_dim)
         
         # 2. Multi-scale Feature Extractor with integrated Spatial Dropout
@@ -109,14 +201,17 @@ class SpacePredictorMLP(nn.Module):
             in_channels=hidden_dim, out_channels=cnn_dim, dropout=dropout
         )
         
-        # 3. Stabilization Layers
+        # 3. Mixture of Experts (replaces single self-attention)
+        self.moe = MoELayer(d_model=cnn_dim, nhead=4, dropout=dropout)
+
+        # 4. Stabilization Layers
         self.norm = nn.LayerNorm(cnn_dim)
         self.gelu = nn.GELU()
         
         # Standard dropout for the fully connected layers
         self.drop = nn.Dropout(dropout)
         
-        # 4. Deep Classifier
+        # 5. Classifier
         self.classifier = nn.Sequential(
             nn.Linear(cnn_dim, 128),
             nn.GELU(),
@@ -124,31 +219,35 @@ class SpacePredictorMLP(nn.Module):
             nn.Linear(128, 1)
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
         """
         Args:
             x: (batch, seq_len, hidden_dim)
+            mask: (batch, seq_len) bool mask for valid positions (optional)
         Returns:
-            logits: (batch, seq_len) raw logits. Do not apply Sigmoid here.
+            preds: (batch, seq_len) probabilities after sigmoid
+            aux_loss: scalar load-balancing loss from the MoE router
         """
         # Save projected input for residual connection
         res = self.residual_proj(x)
         
         # CNN requires shape (batch, channels, seq_len)
         x_conv = x.transpose(1, 2)
-        
-        # Apply multi-scale convolutions and spatial dropout
         x_conv = self.multi_scale_conv(x_conv)
-        
-        # Transpose back to (batch, seq_len, channels)
-        x_conv = x_conv.transpose(1, 2)
+        x_conv = x_conv.transpose(1, 2)  # back to (batch, seq_len, cnn_dim)
         
         # Add residual connection and apply activation
         x = x_conv + res
         x = self.norm(x)
-        x = x + self.gelu(x) 
+        x = x + self.gelu(x)
+
+        # Mixture of Experts
+        x_moe, aux_loss = self.moe(x, mask=mask)
+        x = x_moe + x  # residual around MoE
+
+        x = self.norm(x)
         
-        # Final classification to generate logits
+        # Final classification
         logits = self.classifier(x).squeeze(-1)
         
-        return torch.sigmoid(logits)
+        return torch.sigmoid(logits), aux_loss

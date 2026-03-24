@@ -97,7 +97,7 @@ def mlp_predict(
     char_emb = expand_to_char_embeddings(tok_emb, char_to_token_t)
 
     # MLP prediction
-    probs = mlp(char_emb)  # (1, num_chars)
+    probs, _ = mlp(char_emb)  # (1, num_chars), aux_loss ignored at inference
     return probs.squeeze(0).cpu().tolist()
 
 

@@ -48,6 +48,10 @@ UD_URLS = {
     "it-twittiro-dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-dev.conllu",
     "it-twittiro-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-test.conllu",
 
+    "it-old-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-Old/refs/heads/master/it_old-ud-train.conllu",
+
+    "it-parlamint-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParlaMint/refs/heads/master/it_parlamint-ud-train.conllu",
+    
     # English
     "en-ewt-train": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-train.sent_split"),
     "en-ewt-dev": str(Path(__file__).parent.parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-dev.sent_split"),

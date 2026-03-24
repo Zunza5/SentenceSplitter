@@ -7,6 +7,7 @@ Phase 2: Train the MLP on cached sentence-level embeddings.
 
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -27,7 +28,7 @@ CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 BEST_SENTENCE_CKPT = CHECKPOINT_DIR / "best_sentence_mlp.pt"
 
 
-def extract_sentence_embeddings(batch_size: int = 8, backend: str = "transformers", augment_prob: float = 0.0):
+def extract_sentence_embeddings(batch_size: int = 8, backend: str = "transformers", augment_prob: float = 0.0, max_chars: int = 2048, stride_chars: int = 1024):
     """Extract LLM embeddings for sentence documents and cache them."""
     device = get_device()
     model, tokenizer = load_language_model(backend, device)
@@ -45,8 +46,8 @@ def extract_sentence_embeddings(batch_size: int = 8, backend: str = "transformer
             batch_size=batch_size,
             tokenizer=tokenizer,
             shuffle=False,
-            max_chars=2048,
-            chunk_size=10,
+            max_chars=max_chars,
+            stride_chars=stride_chars,
             augment_prob=0.0,
             augmentation_mode="original"
         )
@@ -67,8 +68,8 @@ def extract_sentence_embeddings(batch_size: int = 8, backend: str = "transformer
                 batch_size=batch_size,
                 tokenizer=tokenizer,
                 shuffle=False,
-                max_chars=2048,
-                chunk_size=10,
+                max_chars=max_chars,
+                stride_chars=stride_chars,
                 augment_prob=augment_prob,
                 augmentation_mode="augmented"
             )
@@ -94,6 +95,7 @@ def train_sentence_mlp(
     dropout: float = 0.2,
     pos_weight: float = 10.0, # Sentence boundaries are much rarer than word boundaries
     patience: int = 7,
+    aux_weight: float = 0.01,
     train_splits: list[str] = None,
     dev_splits: list[str] = None,
     augment_prob: float = 0.0,
@@ -140,6 +142,7 @@ def train_sentence_mlp(
     )
 
     print(f"Train samples: {len(train_ds)}, Dev samples: {len(dev_ds)}")
+    print(f"MoE aux_weight: {aux_weight}")
 
     # Model
     mlp = SpacePredictorMLP(hidden_dim=hidden_dim, dropout=dropout).to(device)
@@ -158,23 +161,28 @@ def train_sentence_mlp(
         total_loss = 0.0
         num_batches = 0
 
-        for batch in train_loader:
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
+        for batch in pbar:
             emb = batch["char_embeddings"].to(device)
             labels = batch["char_labels"].to(device)
             mask = batch["char_mask"].to(device)
 
-            preds = mlp(emb) 
+            preds, moe_aux_loss = mlp(emb, mask=mask) 
 
             loss_all = criterion(preds, labels)
-            loss_masked = (loss_all * mask.float()).sum() / max(mask.float().sum(), 1.0)
+            bce_loss = (loss_all * mask.float()).sum() / max(mask.float().sum(), 1.0)
+            
+            # Total loss = BCE + load-balancing auxiliary loss
+            loss_total = bce_loss + aux_weight * moe_aux_loss
 
             optimizer.zero_grad()
-            loss_masked.backward()
+            loss_total.backward()
             torch.nn.utils.clip_grad_norm_(mlp.parameters(), max_norm=1.0)
             optimizer.step()
 
-            total_loss += loss_masked.item()
+            total_loss += loss_total.item()
             num_batches += 1
+            pbar.set_postfix({"loss": f"{loss_total.item():.4f}", "aux": f"{moe_aux_loss.item():.3f}"})
 
         avg_loss = total_loss / max(num_batches, 1)
         metrics = evaluate(mlp, dev_loader, device)
@@ -197,6 +205,7 @@ def train_sentence_mlp(
                     "model_state_dict": mlp.state_dict(),
                     "hidden_dim": hidden_dim,
                     "dropout": dropout,
+                    "aux_weight": aux_weight,
                     "epoch": epoch,
                     "f1": best_f1,
                 },

@@ -28,11 +28,35 @@ from wordSplitter.embeddings import MODEL_NAME
 from wordSplitter.data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu, get_sentences_for_split
 
 
-def chunk_sentences(sentences: list[list[str]], chunk_size: int = 5) -> list[list[list[str]]]:
-    """Group sentences into chunks of `chunk_size`."""
+def chunk_sentences_by_chars(sentences: list[list[str]], max_chars: int = 2048, stride_chars: int = 1024) -> list[tuple[list[list[str]], int]]:
+    """Group sentences such that their combined length is approx `max_chars`, sliding by `stride_chars`."""
     chunks = []
-    for i in range(0, len(sentences), chunk_size):
-        chunks.append(sentences[i : i + chunk_size])
+    current_chunk = []
+    current_len = 0
+    current_offset = 0
+    
+    i = 0
+    while i < len(sentences):
+        sent = sentences[i]
+        sent_len = sum(len(w) for w in sent) + len(sent)
+        
+        if current_len + sent_len > max_chars and current_chunk:
+            chunks.append((list(current_chunk), current_offset))
+            dropped_len = 0
+            while dropped_len < stride_chars and current_chunk:
+                dropped_sent = current_chunk.pop(0)
+                d_len = sum(len(w) for w in dropped_sent) + len(dropped_sent)
+                dropped_len += d_len
+                current_offset += d_len
+            current_len -= dropped_len
+        else:
+            current_chunk.append(sent)
+            current_len += sent_len
+            i += 1
+            
+    if current_chunk:
+        chunks.append((current_chunk, current_offset))
+        
     return chunks
 
 
@@ -164,19 +188,12 @@ class SentenceSplitDataset(Dataset):
         split: str = "train",
         tokenizer: Optional[AutoTokenizer] = None,
         max_chars: int = 2048,
-        chunk_size: int = 5,
+        stride_chars: int = 1024,
         augment_prob: float = 0.0,
         augmentation_mode: str = "original", # "original", "augmented", "both"
     ):
         # Load and parse using centralized helper (prioritizes local .sent_split)
         self.sentences = get_sentences_for_split(split)
-
-        if split == "engTrain":
-            self.sentences = self.sentences[:2773]
-        elif split == "engDev":
-            self.sentences = self.sentences[:185]
-        elif split == "engTest":
-            self.sentences = self.sentences[:173]
 
         if tokenizer is None:
             self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -184,26 +201,24 @@ class SentenceSplitDataset(Dataset):
             self.tokenizer = tokenizer
 
         self.samples = []
-        chunks = chunk_sentences(self.sentences, chunk_size=chunk_size)
+        chunks_with_offsets = chunk_sentences_by_chars(self.sentences, max_chars=max_chars, stride_chars=stride_chars)
         
-        print(f"Dataset '{split}': processing {len(chunks)} chunks (augment_prob={augment_prob})...")
+        print(f"Dataset '{split}': processing {len(chunks_with_offsets)} chunks (augment_prob={augment_prob})...")
         
-        for chunk in chunks:
+        for chunk, offset in chunks_with_offsets:
             # 1. Original
             if augmentation_mode in ("original", "both"):
-                self._add_sample(chunk, max_chars)
+                self._add_sample(chunk, max_chars, offset)
             
             # 2. Augmented
             if augmentation_mode in ("augmented", "both"):
-                # If mode is "augmented", we use augment_prob to decide per chunk
-                # OR if it's "augmented" we might want to force it?
-                # Let's stick to the prob.
                 if augment_prob > 0 and random.random() < augment_prob:
                     aug_chunk = augment_twitter_style(chunk)
                     if aug_chunk:
-                        self._add_sample(aug_chunk, max_chars)
+                        # Augmented samples use the same offset as the original
+                        self._add_sample(aug_chunk, max_chars, offset)
 
-    def _add_sample(self, chunk: list[list[str]], max_chars: int):
+    def _add_sample(self, chunk: list[list[str]], max_chars: int, char_offset: int = 0):
         text, labels = make_sentence_bounds_labels(chunk)
         if 0 < len(text) <= max_chars:
             input_ids, char_to_token = build_sentence_char_to_token_map(
@@ -215,6 +230,7 @@ class SentenceSplitDataset(Dataset):
                     "char_labels": torch.tensor(labels, dtype=torch.float32),
                     "char_to_token": torch.tensor(char_to_token, dtype=torch.long),
                     "spaceless": text,
+                    "char_offset": char_offset,
                 }
             )
 
@@ -252,6 +268,7 @@ def collate_sentence_fn(batch: list[dict]) -> dict:
         "char_to_token": char_to_token,
         "char_mask": char_mask,
         "spaceless": [s["spaceless"] for s in batch],
+        "char_offset": torch.tensor([s.get("char_offset", 0) for s in batch], dtype=torch.long),
     }
 
 
@@ -260,7 +277,7 @@ def get_sentence_dataloader(
     batch_size: int = 16,
     tokenizer: Optional[AutoTokenizer] = None,
     max_chars: int = 2048,
-    chunk_size: int = 5,
+    stride_chars: int = 1024,
     shuffle: Optional[bool] = None,
     augment_prob: float = 0.0,
     augmentation_mode: str = "original",
@@ -269,7 +286,7 @@ def get_sentence_dataloader(
         split=split, 
         tokenizer=tokenizer, 
         max_chars=max_chars, 
-        chunk_size=chunk_size,
+        stride_chars=stride_chars,
         augment_prob=augment_prob,
         augmentation_mode=augmentation_mode
     )

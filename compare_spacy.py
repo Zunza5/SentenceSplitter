@@ -23,8 +23,16 @@ def get_spacy_model(language):
 
 def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx"):
     print(f"\n--- Running LLM Inference on {len(dataloader.dataset)} chunks ---")
-    all_preds = []
-    all_labels = []
+    
+    # Pre-determine total length to initialize buffers
+    total_text_len = 0
+    for sample in dataloader.dataset:
+        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
+    
+    full_probs_sum = [0.0] * total_text_len
+    full_probs_count = [0] * total_text_len
+    full_labels = [0] * total_text_len
+    label_filled = [False] * total_text_len
     
     total_time = 0.0
     num_processed = 0
@@ -36,32 +44,51 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
             char_to_token = batch["char_to_token"].to(device)
             labels = batch["char_labels"].to(device)
             mask = batch["char_mask"].to(device)
+            offsets = batch["char_offset"]
             
             start_batch = time.time()
             
             tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
             char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
             char_emb = char_emb.float()
-            preds = mlp(char_emb)
+            preds, _ = mlp(char_emb)
             
             end_batch = time.time()
             total_time += (end_batch - start_batch)
             
             for b in range(preds.shape[0]):
+                offset = int(offsets[b])
                 valid = mask[b]
-                p = (preds[b][valid] > 0.5).int().cpu().tolist()
-                l = labels[b][valid].int().cpu().tolist()
-                all_preds.extend(p)
-                all_labels.extend(l)
+                p_list = preds[b][valid].cpu().tolist()
+                l_list = labels[b][valid].cpu().tolist()
+                
+                for j, (p, l) in enumerate(zip(p_list, l_list)):
+                    idx = offset + j
+                    if idx < total_text_len:
+                        full_probs_sum[idx] += p
+                        full_probs_count[idx] += 1
+                        if not label_filled[idx]:
+                            full_labels[idx] = int(l)
+                            label_filled[idx] = True
+                
                 num_processed += 1
                 
             if (i + 1) % 10 == 0:
                 print(f" LLM: Batch {i+1}/{len(dataloader)} processed...")
 
+    # Average and threshold
+    final_preds = []
+    final_labels = []
+    for j in range(total_text_len):
+        if label_filled[j] and full_labels[j] >= 0:
+            avg_p = full_probs_sum[j] / max(1, full_probs_count[j])
+            final_preds.append(1 if avg_p > 0.5 else 0)
+            final_labels.append(full_labels[j])
+
     precision, recall, f1, _ = precision_recall_fscore_support(
-        all_labels, all_preds, average="binary", zero_division=0
+        final_labels, final_preds, average="binary", zero_division=0
     )
-    accuracy = accuracy_score(all_labels, all_preds)
+    accuracy = accuracy_score(final_labels, final_preds)
     
     return {
         "accuracy": accuracy,
@@ -74,8 +101,15 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
 
 def evaluate_spacy(dataloader, nlp_model):
     print(f"\n--- Running SpaCy Inference on {len(dataloader.dataset)} chunks ---")
-    all_preds = []
-    all_labels = []
+    
+    total_text_len = 0
+    for sample in dataloader.dataset:
+        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
+        
+    full_preds_sum = [0.0] * total_text_len
+    full_preds_count = [0] * total_text_len
+    full_labels = [0] * total_text_len
+    label_filled = [False] * total_text_len
     
     total_time = 0.0
     num_processed = 0
@@ -83,59 +117,63 @@ def evaluate_spacy(dataloader, nlp_model):
     for i, batch in enumerate(dataloader):
         labels = batch["char_labels"]
         mask = batch["char_mask"]
-        texts = batch["spaceless"] # This is the original text with spaces
+        texts = batch["spaceless"]
+        offsets = batch["char_offset"]
         
         start_batch = time.time()
         
         for b in range(len(texts)):
             text = texts[b]
+            offset = int(offsets[b])
             valid_len = int(mask[b].sum().item())
             
-            # Ground truth
-            l = labels[b][:valid_len].int().tolist()
+            l_list = labels[b][:valid_len].int().tolist()
             
             # Run SpaCy
             doc = nlp_model(text)
-            
-            # Extract boundary positions (character indices)
-            # sent.end_char is the index of the character *after* the sentence.
-            # In our dataset, the label=1 is on the SPACE separating sentences.
-            # SpaCy usually includes the trailing space or punctuation.
-            # We map SpaCy output to a binary list of length `valid_len`.
-            
             p = [0] * valid_len
             
             for sent_idx, sent in enumerate(doc.sents):
                 if sent_idx < len(list(doc.sents)) - 1:
-                    # In our model, we label the space between sentences.
-                    # SpaCy's sent.end_char gives the position after the sentence text.
                     boundary_idx = sent.end_char
-                    
-                    # Sometimes SpaCy includes the space in the sentence, sometimes it leaves it out.
-                    # We check around end_char to find the space and mark it as 1.
                     if boundary_idx < valid_len:
                         if text[boundary_idx] == " ":
                             p[boundary_idx] = 1
                         elif boundary_idx > 0 and text[boundary_idx - 1] == " ":
                             p[boundary_idx - 1] = 1
                         else:
-                            p[boundary_idx] = 1 # Fallback, mark the exact split point
+                            p[boundary_idx] = 1 
                             
-            end_batch = time.time()
-            total_time += (end_batch - start_batch)
-            start_batch = time.time() # Reset for next item calculation
+            # Accumulate
+            for j in range(valid_len):
+                idx = offset + j
+                if idx < total_text_len:
+                    full_preds_sum[idx] += p[j]
+                    full_preds_count[idx] += 1
+                    if not label_filled[idx]:
+                        full_labels[idx] = l_list[j]
+                        label_filled[idx] = True
             
-            all_preds.extend(p)
-            all_labels.extend(l)
             num_processed += 1
+            
+        end_batch = time.time()
+        total_time += (end_batch - start_batch)
             
         if (i + 1) % 10 == 0:
             print(f" SpaCy: Batch {i+1}/{len(dataloader)} processed...")
 
+    final_preds = []
+    final_labels = []
+    for j in range(total_text_len):
+        if label_filled[j] and full_labels[j] >= 0:
+            avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
+            final_preds.append(1 if avg_p >= 0.5 else 0)
+            final_labels.append(full_labels[j])
+
     precision, recall, f1, _ = precision_recall_fscore_support(
-        all_labels, all_preds, average="binary", zero_division=0
+        final_labels, final_preds, average="binary", zero_division=0
     )
-    accuracy = accuracy_score(all_labels, all_preds)
+    accuracy = accuracy_score(final_labels, final_preds)
     
     return {
         "accuracy": accuracy,
@@ -148,8 +186,15 @@ def evaluate_spacy(dataloader, nlp_model):
 
 def evaluate_nltk(dataloader, language="italian"):
     print(f"\n--- Running NLTK Inference on {len(dataloader.dataset)} chunks ---")
-    all_preds = []
-    all_labels = []
+    
+    total_text_len = 0
+    for sample in dataloader.dataset:
+        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
+        
+    full_preds_sum = [0.0] * total_text_len
+    full_preds_count = [0] * total_text_len
+    full_labels = [0] * total_text_len
+    label_filled = [False] * total_text_len
     
     total_time = 0.0
     num_processed = 0
@@ -158,18 +203,18 @@ def evaluate_nltk(dataloader, language="italian"):
         labels = batch["char_labels"]
         mask = batch["char_mask"]
         texts = batch["spaceless"]
+        offsets = batch["char_offset"]
         
         start_batch = time.time()
         
         for b in range(len(texts)):
             text = texts[b]
+            offset = int(offsets[b])
             valid_len = int(mask[b].sum().item())
-            
-            l = labels[b][:valid_len].int().tolist()
+            l_list = labels[b][:valid_len].int().tolist()
             
             # Run NLTK
             sentences = nltk.sent_tokenize(text, language=language)
-            
             p = [0] * valid_len
             
             current_pos = 0
@@ -178,7 +223,6 @@ def evaluate_nltk(dataloader, language="italian"):
                     idx = text.find(sent_text, current_pos)
                     if idx != -1:
                         boundary_idx = idx + len(sent_text)
-                        
                         if boundary_idx < valid_len:
                             if text[boundary_idx] == " ":
                                 p[boundary_idx] = 1
@@ -188,21 +232,35 @@ def evaluate_nltk(dataloader, language="italian"):
                                 p[boundary_idx] = 1
                         current_pos = boundary_idx
                             
-            end_batch = time.time()
-            total_time += (end_batch - start_batch)
-            start_batch = time.time()
+            for j in range(valid_len):
+                idx = offset + j
+                if idx < total_text_len:
+                    full_preds_sum[idx] += p[j]
+                    full_preds_count[idx] += 1
+                    if not label_filled[idx]:
+                        full_labels[idx] = l_list[j]
+                        label_filled[idx] = True
             
-            all_preds.extend(p)
-            all_labels.extend(l)
             num_processed += 1
+            
+        end_batch = time.time()
+        total_time += (end_batch - start_batch)
             
         if (i + 1) % 10 == 0:
             print(f" NLTK: Batch {i+1}/{len(dataloader)} processed...")
 
+    final_preds = []
+    final_labels = []
+    for j in range(total_text_len):
+        if label_filled[j] and full_labels[j] >= 0:
+            avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
+            final_preds.append(1 if avg_p >= 0.5 else 0)
+            final_labels.append(full_labels[j])
+
     precision, recall, f1, _ = precision_recall_fscore_support(
-        all_labels, all_preds, average="binary", zero_division=0
+        final_labels, final_preds, average="binary", zero_division=0
     )
-    accuracy = accuracy_score(all_labels, all_preds)
+    accuracy = accuracy_score(final_labels, final_preds)
     
     return {
         "accuracy": accuracy,
@@ -342,6 +400,8 @@ def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
     parser.add_argument("--test-splits", type=str, default="it-isdt-test,it-postwita-test,it-vit-test,it-twittiro-test,it-partut-test,it-markit-test,en-ewt-test,en-gum-test,en-pud-test,en-partut-test", help="Comma-separated test splits")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for LLM inference")
+    parser.add_argument("--max-chars", type=int, default=1024)
+    parser.add_argument("--stride-chars", type=int, default=512, help="Set to < max-chars to enable overlapping window averaging")
     args = parser.parse_args()
     
     device = get_device()
@@ -384,9 +444,9 @@ def main():
                 split=split,
                 batch_size=args.batch_size,
                 tokenizer=tokenizer,
-                shuffle=False,
-                max_chars=4096, 
-                chunk_size=10,  
+                max_chars=args.max_chars, 
+                stride_chars=args.stride_chars,
+                augment_prob=0.0,
                 augmentation_mode="original"
             )
             

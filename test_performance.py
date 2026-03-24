@@ -77,7 +77,7 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
             # Phase C: MLP Forward
             t4 = time.time()
             char_emb = char_emb.float() # Ensure float32 for MLP
-            preds = mlp(char_emb)
+            preds, _ = mlp(char_emb)
             t5 = time.time()
             total_mlp_time += (t5 - t4)
             
