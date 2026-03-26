@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import matplotlib.pyplot as plt
 import numpy as np
 
-from wordSplitter.embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from wordSplitter.embeddings import load_language_model, extract_token_embeddings, get_device
 from wordSplitter.model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
@@ -22,18 +22,11 @@ def get_spacy_model(language):
         return spacy.load(model_name)
 
 def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx"):
+    """Evaluate the LLM-based model at token level."""
     print(f"\n--- Running LLM Inference on {len(dataloader.dataset)} chunks ---")
     
-    # Pre-determine total length to initialize buffers
-    total_text_len = 0
-    for sample in dataloader.dataset:
-        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
-    
-    full_probs_sum = [0.0] * total_text_len
-    full_probs_count = [0] * total_text_len
-    full_labels = [0] * total_text_len
-    label_filled = [False] * total_text_len
-    
+    all_preds = []
+    all_labels = []
     total_time = 0.0
     num_processed = 0
     
@@ -41,54 +34,49 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
         for i, batch in enumerate(dataloader):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            char_to_token = batch["char_to_token"].to(device)
-            labels = batch["char_labels"].to(device)
-            mask = batch["char_mask"].to(device)
-            offsets = batch["char_offset"]
+            labels = batch["token_labels"]
+            mask = batch["token_mask"]
             
             start_batch = time.time()
             
             tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
-            char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
-            char_emb = char_emb.float()
-            preds, _ = mlp(char_emb)
+            tok_emb = tok_emb.float()
+            
+            # Fix Prompt Shift: filter each sample in batch to exclude prompt/padding
+            batch_probs = []
+            for b in range(tok_emb.shape[0]):
+                valid_mask = mask[b]
+                if not valid_mask.any():
+                    batch_probs.append(torch.zeros(0, device=device))
+                    continue
+                
+                # Extract only text tokens for this sample
+                sample_text_emb = tok_emb[b, valid_mask, :].unsqueeze(0) # (1, num_text_tokens, hidden_dim)
+                
+                # Predict
+                probs, _ = mlp(sample_text_emb)
+                batch_probs.append(probs.squeeze(0))
             
             end_batch = time.time()
             total_time += (end_batch - start_batch)
             
-            for b in range(preds.shape[0]):
-                offset = int(offsets[b])
-                valid = mask[b]
-                p_list = preds[b][valid].cpu().tolist()
-                l_list = labels[b][valid].cpu().tolist()
+            # Collect predictions
+            for b in range(len(batch_probs)):
+                p = (batch_probs[b].cpu() > 0.5).int().tolist()
+                valid_mask = mask[b]
+                l = labels[b, valid_mask].int().tolist()
                 
-                for j, (p, l) in enumerate(zip(p_list, l_list)):
-                    idx = offset + j
-                    if idx < total_text_len:
-                        full_probs_sum[idx] += p
-                        full_probs_count[idx] += 1
-                        if not label_filled[idx]:
-                            full_labels[idx] = int(l)
-                            label_filled[idx] = True
-                
+                all_preds.extend(p)
+                all_labels.extend(l)
                 num_processed += 1
                 
             if (i + 1) % 10 == 0:
                 print(f" LLM: Batch {i+1}/{len(dataloader)} processed...")
 
-    # Average and threshold
-    final_preds = []
-    final_labels = []
-    for j in range(total_text_len):
-        if label_filled[j] and full_labels[j] >= 0:
-            avg_p = full_probs_sum[j] / max(1, full_probs_count[j])
-            final_preds.append(1 if avg_p > 0.5 else 0)
-            final_labels.append(full_labels[j])
-
     precision, recall, f1, _ = precision_recall_fscore_support(
-        final_labels, final_preds, average="binary", zero_division=0
+        all_labels, all_preds, average="binary", zero_division=0
     )
-    accuracy = accuracy_score(final_labels, final_preds)
+    accuracy = accuracy_score(all_labels, all_preds)
     
     return {
         "accuracy": accuracy,
@@ -99,61 +87,107 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
         "num_processed": num_processed
     }
 
-def evaluate_spacy(dataloader, nlp_model):
+def _build_char_to_token_map(text, tokenizer):
+    """Build a mapping from character position to token index using offset_mapping."""
+    encoding = tokenizer(
+        text,
+        return_tensors="pt",
+        add_special_tokens=True,
+        return_offsets_mapping=True,
+    )
+    offsets = encoding["offset_mapping"].squeeze(0).tolist()
+    
+    # Map: for each character position, which token covers it?
+    char_to_tok = [-1] * len(text)
+    for tok_idx, (start, end) in enumerate(offsets):
+        if start == end:
+            continue  # skip special tokens
+        for c in range(start, min(end, len(text))):
+            char_to_tok[c] = tok_idx
+    
+    # Build a set of "valid" token indices (those that are not special tokens)
+    # This matches the token_mask logic in data_sentence.py
+    valid_tok_indices = []
+    for tok_idx, (start, end) in enumerate(offsets):
+        if start == 0 and end == 0:
+            continue
+        valid_tok_indices.append(tok_idx)
+    
+    # Build mapping from absolute token index to position in the "valid" array.
+    # This is needed because the labels array only contains valid tokens (mask=True).
+    tok_to_valid_idx = {}
+    for valid_pos, tok_idx in enumerate(valid_tok_indices):
+        tok_to_valid_idx[tok_idx] = valid_pos
+    
+    return char_to_tok, tok_to_valid_idx
+
+
+def _char_boundaries_to_token_preds(boundary_chars, text, tokenizer, num_valid_tokens):
+    """Convert char-level boundary positions to token-level predictions using tokenizer offsets."""
+    char_to_tok, tok_to_valid = _build_char_to_token_map(text, tokenizer)
+    
+    p = [0] * num_valid_tokens
+    for bc in boundary_chars:
+        # Try the exact char position first, then nearby chars
+        tok_idx = -1
+        for offset in [0, -1, 1, -2, 2]:
+            pos = bc + offset
+            if 0 <= pos < len(text) and char_to_tok[pos] != -1:
+                tok_idx = char_to_tok[pos]
+                break
+        
+        if tok_idx != -1 and tok_idx in tok_to_valid:
+            valid_idx = tok_to_valid[tok_idx]
+            if 0 <= valid_idx < num_valid_tokens:
+                p[valid_idx] = 1
+    
+    return p
+
+
+def evaluate_spacy(dataloader, nlp_model, tokenizer=None):
+    """Evaluate SpaCy at token-level using proper offset_mapping alignment."""
     print(f"\n--- Running SpaCy Inference on {len(dataloader.dataset)} chunks ---")
     
-    total_text_len = 0
-    for sample in dataloader.dataset:
-        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
-        
-    full_preds_sum = [0.0] * total_text_len
-    full_preds_count = [0] * total_text_len
-    full_labels = [0] * total_text_len
-    label_filled = [False] * total_text_len
-    
+    all_preds = []
+    all_labels = []
     total_time = 0.0
     num_processed = 0
     
     for i, batch in enumerate(dataloader):
-        labels = batch["char_labels"]
-        mask = batch["char_mask"]
-        texts = batch["spaceless"]
-        offsets = batch["char_offset"]
+        texts = batch["text"]
+        token_labels = batch["token_labels"]
+        token_mask = batch["token_mask"]
         
         start_batch = time.time()
         
         for b in range(len(texts)):
             text = texts[b]
-            offset = int(offsets[b])
-            valid_len = int(mask[b].sum().item())
+            valid = token_mask[b]
+            l = token_labels[b][valid].int().tolist()
             
-            l_list = labels[b][:valid_len].int().tolist()
-            
-            # Run SpaCy
+            # Run SpaCy on the original text
             doc = nlp_model(text)
-            p = [0] * valid_len
             
-            for sent_idx, sent in enumerate(doc.sents):
-                if sent_idx < len(list(doc.sents)) - 1:
-                    boundary_idx = sent.end_char
-                    if boundary_idx < valid_len:
-                        if text[boundary_idx] == " ":
-                            p[boundary_idx] = 1
-                        elif boundary_idx > 0 and text[boundary_idx - 1] == " ":
-                            p[boundary_idx - 1] = 1
-                        else:
-                            p[boundary_idx] = 1 
-                            
-            # Accumulate
-            for j in range(valid_len):
-                idx = offset + j
-                if idx < total_text_len:
-                    full_preds_sum[idx] += p[j]
-                    full_preds_count[idx] += 1
-                    if not label_filled[idx]:
-                        full_labels[idx] = l_list[j]
-                        label_filled[idx] = True
+            # Collect SpaCy boundary char positions
+            spacy_boundary_chars = set()
+            sents = list(doc.sents)
+            for sent_idx, sent in enumerate(sents[:-1]):
+                bc = sent.end_char
+                if bc < len(text) and text[bc] == " ":
+                    spacy_boundary_chars.add(bc)
+                elif bc > 0:
+                    spacy_boundary_chars.add(bc - 1)
             
+            # Map to token-level using proper offset_mapping
+            num_tokens = len(l)
+            if tokenizer is not None:
+                p = _char_boundaries_to_token_preds(spacy_boundary_chars, text, tokenizer, num_tokens)
+            else:
+                # Fallback (should not happen)
+                p = [0] * num_tokens
+            
+            all_preds.extend(p)
+            all_labels.extend(l)
             num_processed += 1
             
         end_batch = time.time()
@@ -162,18 +196,10 @@ def evaluate_spacy(dataloader, nlp_model):
         if (i + 1) % 10 == 0:
             print(f" SpaCy: Batch {i+1}/{len(dataloader)} processed...")
 
-    final_preds = []
-    final_labels = []
-    for j in range(total_text_len):
-        if label_filled[j] and full_labels[j] >= 0:
-            avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
-            final_preds.append(1 if avg_p >= 0.5 else 0)
-            final_labels.append(full_labels[j])
-
     precision, recall, f1, _ = precision_recall_fscore_support(
-        final_labels, final_preds, average="binary", zero_division=0
+        all_labels, all_preds, average="binary", zero_division=0
     )
-    accuracy = accuracy_score(final_labels, final_preds)
+    accuracy = accuracy_score(all_labels, all_preds)
     
     return {
         "accuracy": accuracy,
@@ -184,63 +210,53 @@ def evaluate_spacy(dataloader, nlp_model):
         "num_processed": num_processed
     }
 
-def evaluate_nltk(dataloader, language="italian"):
+def evaluate_nltk(dataloader, language="italian", tokenizer=None):
+    """Evaluate NLTK at token-level using proper offset_mapping alignment."""
     print(f"\n--- Running NLTK Inference on {len(dataloader.dataset)} chunks ---")
     
-    total_text_len = 0
-    for sample in dataloader.dataset:
-        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
-        
-    full_preds_sum = [0.0] * total_text_len
-    full_preds_count = [0] * total_text_len
-    full_labels = [0] * total_text_len
-    label_filled = [False] * total_text_len
-    
+    all_preds = []
+    all_labels = []
     total_time = 0.0
     num_processed = 0
     
     for i, batch in enumerate(dataloader):
-        labels = batch["char_labels"]
-        mask = batch["char_mask"]
-        texts = batch["spaceless"]
-        offsets = batch["char_offset"]
+        texts = batch["text"]
+        token_labels = batch["token_labels"]
+        token_mask = batch["token_mask"]
         
         start_batch = time.time()
         
         for b in range(len(texts)):
             text = texts[b]
-            offset = int(offsets[b])
-            valid_len = int(mask[b].sum().item())
-            l_list = labels[b][:valid_len].int().tolist()
+            valid = token_mask[b]
+            l = token_labels[b][valid].int().tolist()
             
             # Run NLTK
             sentences = nltk.sent_tokenize(text, language=language)
-            p = [0] * valid_len
             
+            # Build char-level boundary positions
+            nltk_boundary_chars = set()
             current_pos = 0
-            for sent_idx, sent_text in enumerate(sentences):
-                if sent_idx < len(sentences) - 1:
-                    idx = text.find(sent_text, current_pos)
-                    if idx != -1:
-                        boundary_idx = idx + len(sent_text)
-                        if boundary_idx < valid_len:
-                            if text[boundary_idx] == " ":
-                                p[boundary_idx] = 1
-                            elif boundary_idx > 0 and text[boundary_idx - 1] == " ":
-                                p[boundary_idx - 1] = 1
-                            else:
-                                p[boundary_idx] = 1
-                        current_pos = boundary_idx
-                            
-            for j in range(valid_len):
-                idx = offset + j
-                if idx < total_text_len:
-                    full_preds_sum[idx] += p[j]
-                    full_preds_count[idx] += 1
-                    if not label_filled[idx]:
-                        full_labels[idx] = l_list[j]
-                        label_filled[idx] = True
+            for sent_idx, sent_text in enumerate(sentences[:-1]):
+                idx = text.find(sent_text, current_pos)
+                if idx != -1:
+                    boundary_idx = idx + len(sent_text)
+                    if boundary_idx < len(text):
+                        if text[boundary_idx] == " ":
+                            nltk_boundary_chars.add(boundary_idx)
+                        elif boundary_idx > 0:
+                            nltk_boundary_chars.add(boundary_idx - 1)
+                    current_pos = boundary_idx
             
+            # Map to token-level using proper offset_mapping
+            num_tokens = len(l)
+            if tokenizer is not None:
+                p = _char_boundaries_to_token_preds(nltk_boundary_chars, text, tokenizer, num_tokens)
+            else:
+                p = [0] * num_tokens
+            
+            all_preds.extend(p)
+            all_labels.extend(l)
             num_processed += 1
             
         end_batch = time.time()
@@ -249,18 +265,10 @@ def evaluate_nltk(dataloader, language="italian"):
         if (i + 1) % 10 == 0:
             print(f" NLTK: Batch {i+1}/{len(dataloader)} processed...")
 
-    final_preds = []
-    final_labels = []
-    for j in range(total_text_len):
-        if label_filled[j] and full_labels[j] >= 0:
-            avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
-            final_preds.append(1 if avg_p >= 0.5 else 0)
-            final_labels.append(full_labels[j])
-
     precision, recall, f1, _ = precision_recall_fscore_support(
-        final_labels, final_preds, average="binary", zero_division=0
+        all_labels, all_preds, average="binary", zero_division=0
     )
-    accuracy = accuracy_score(final_labels, final_preds)
+    accuracy = accuracy_score(all_labels, all_preds)
     
     return {
         "accuracy": accuracy,
@@ -421,7 +429,10 @@ def main():
     print("\nLoading LLM MLP...")
     checkpoint_path = Path("checkpoints/best_sentence_mlp.pt")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
-    mlp = SpacePredictorMLP(hidden_dim=checkpoint.get("hidden_dim", 2048), dropout=0.0).to(device)
+    hidden_dim = checkpoint.get("hidden_dim", 2560)
+    d_model = checkpoint.get("d_model", 512)
+    dropout = checkpoint.get("dropout", 0.2)
+    mlp = SpacePredictorMLP(hidden_dim=hidden_dim, d_model=d_model, dropout=dropout).to(device)
     mlp.load_state_dict(checkpoint["model_state_dict"])
     mlp.eval()
     
@@ -450,8 +461,8 @@ def main():
                 augmentation_mode="original"
             )
             
-            spacy_results = evaluate_spacy(dataloader, nlp)
-            nltk_results = evaluate_nltk(dataloader, language)
+            spacy_results = evaluate_spacy(dataloader, nlp, tokenizer=tokenizer)
+            nltk_results = evaluate_nltk(dataloader, language, tokenizer=tokenizer)
             llm_results = evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend=backend)
             
             print_comparison(spacy_results, nltk_results, llm_results)

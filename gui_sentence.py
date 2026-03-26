@@ -22,6 +22,7 @@ class SentenceSplitterGUI:
         self.llm_model = None
         self.tokenizer = None
         self.mlp = None
+        self.layer_idx = None
         self.models_loaded = False
         
         # Start initial load in background
@@ -64,7 +65,7 @@ class SentenceSplitterGUI:
             # Hardcoding mlx since it's the fastest on Apple Silicon
             backend = "mlx"
             self.llm_model, self.tokenizer = load_language_model(backend=backend, device=self.device)
-            self.mlp = load_sentence_mlp(device=self.device)
+            self.mlp, self.layer_idx = load_sentence_mlp(device=self.device, backend=backend)
             self.mlp.eval()
             self.models_loaded = True
             
@@ -105,7 +106,8 @@ class SentenceSplitterGUI:
                     tokenizer=self.tokenizer,
                     device=self.device,
                     backend="mlx",
-                    threshold=0.5
+                    threshold=0.5,
+                    layer_idx=self.layer_idx
                 )
                 
             elapsed = time.time() - start_time

@@ -22,7 +22,7 @@ from transformers import AutoTokenizer
 import conllu
 import random
 import re
-from wordSplitter.embeddings import MODEL_NAME
+from wordSplitter.embeddings import MODEL_NAME, INSTRUCT_PROMPT
 
 # Reusing UD_URLS and CACHE_DIR from data.py
 from wordSplitter.data import UD_URLS, CACHE_DIR, download_ud_file, parse_conllu, get_sentences_for_split
@@ -152,30 +152,66 @@ def make_sentence_bounds_labels(chunk: list[list[str]]) -> tuple[str, list[int]]
     return text, labels
 
 
-def build_sentence_char_to_token_map(
-    text: str,
-    tokenizer: AutoTokenizer,
-) -> tuple[list[int], list[int]]:
+
+
+def make_sentence_token_labels(
+    text: str, char_labels: list[int], tokenizer: AutoTokenizer
+) -> tuple[list[int], list[int], list[tuple[int, int]]]:
     """
-    Tokenize the text and build a mapping from character position → token index.
+    Create token-level labels from character-level labels using offset_mapping.
+    
+    The text is prepended with an instruction prompt for the embedding model.
+    Prompt tokens get label=-1 (ignore). Only the actual text tokens get
+    real labels (0=no boundary, 1=boundary).
+    
+    Returns:
+        input_ids: token IDs (including prompt prefix)
+        token_labels: per-token labels (-1=ignore, 0=no boundary, 1=boundary)
+        offsets: offset_mapping for each token
     """
+    # Prepend instruction prompt
+    prompted_text = f"{INSTRUCT_PROMPT}{text}"
+    prompt_char_len = len(INSTRUCT_PROMPT)
+    
     encoding = tokenizer(
-        text,
+        prompted_text,
         return_tensors="pt",
         add_special_tokens=True,
         return_offsets_mapping=True,
     )
     input_ids = encoding["input_ids"].squeeze(0).tolist()
     offsets = encoding["offset_mapping"].squeeze(0).tolist()
-
-    char_to_token = [0] * len(text)
+    
+    token_labels = []
+    last_real_token_idx = -1
     
     for tok_idx, (start, end) in enumerate(offsets):
-        for char_pos in range(start, end):
-            if char_pos < len(text):
-                char_to_token[char_pos] = tok_idx
-
-    return input_ids, char_to_token
+        if start == 0 and end == 0:
+            # Special token (BOS, EOS, PAD) -> ignore
+            token_labels.append(-1)
+        elif end <= prompt_char_len:
+            # Token belongs to the instruction prompt -> ignore
+            token_labels.append(-1)
+        else:
+            last_real_token_idx = tok_idx
+            # Map back to original text positions (subtract prompt length)
+            text_start = max(0, start - prompt_char_len)
+            text_end = end - prompt_char_len
+            # Check if any character covered by this token is a boundary
+            has_boundary = False
+            for char_pos in range(text_start, text_end):
+                if char_pos < len(char_labels) and char_labels[char_pos] == 1:
+                    has_boundary = True
+                    break
+            token_labels.append(1 if has_boundary else 0)
+            # Adjust offsets to be relative to original text
+            offsets[tok_idx] = (text_start, text_end)
+    
+    # Last real token gets -1 (ignore), matching char-level convention
+    if last_real_token_idx >= 0:
+        token_labels[last_real_token_idx] = -1
+    
+    return input_ids, token_labels, offsets
 
 
 class SentenceSplitDataset(Dataset):
@@ -219,17 +255,17 @@ class SentenceSplitDataset(Dataset):
                         self._add_sample(aug_chunk, max_chars, offset)
 
     def _add_sample(self, chunk: list[list[str]], max_chars: int, char_offset: int = 0):
-        text, labels = make_sentence_bounds_labels(chunk)
+        text, char_labels = make_sentence_bounds_labels(chunk)
         if 0 < len(text) <= max_chars:
-            input_ids, char_to_token = build_sentence_char_to_token_map(
-                text, self.tokenizer
+            input_ids, token_labels, offsets = make_sentence_token_labels(
+                text, char_labels, self.tokenizer
             )
             self.samples.append(
                 {
                     "input_ids": torch.tensor(input_ids, dtype=torch.long),
-                    "char_labels": torch.tensor(labels, dtype=torch.float32),
-                    "char_to_token": torch.tensor(char_to_token, dtype=torch.long),
-                    "spaceless": text,
+                    "token_labels": torch.tensor(token_labels, dtype=torch.float32),
+                    "token_offsets": torch.tensor(offsets, dtype=torch.long),
+                    "text": text,
                     "char_offset": char_offset,
                 }
             )
@@ -243,31 +279,28 @@ class SentenceSplitDataset(Dataset):
 
 def collate_sentence_fn(batch: list[dict]) -> dict:
     """
-    Custom collation function for sentence splitting.
+    Custom collation function for sentence splitting (token-level).
     """
     input_ids = pad_sequence(
         [s["input_ids"] for s in batch], batch_first=True, padding_value=0
     )
-    char_labels = pad_sequence(
-        [s["char_labels"] for s in batch], batch_first=True, padding_value=-1.0
-    )
-    char_to_token = pad_sequence(
-        [s["char_to_token"] for s in batch], batch_first=True, padding_value=0
+    token_labels = pad_sequence(
+        [s["token_labels"] for s in batch], batch_first=True, padding_value=-1.0
     )
     attention_mask = pad_sequence(
         [torch.ones_like(s["input_ids"]) for s in batch],
         batch_first=True,
         padding_value=0,
     )
-    char_mask = char_labels >= 0
+    token_mask = token_labels >= 0
 
     return {
         "input_ids": input_ids,
         "attention_mask": attention_mask,
-        "char_labels": char_labels,
-        "char_to_token": char_to_token,
-        "char_mask": char_mask,
-        "spaceless": [s["spaceless"] for s in batch],
+        "token_labels": token_labels,
+        "token_mask": token_mask,
+        "token_offsets": pad_sequence([s["token_offsets"] for s in batch], batch_first=True, padding_value=0),
+        "text": [s["text"] for s in batch],
         "char_offset": torch.tensor([s.get("char_offset", 0) for s in batch], dtype=torch.long),
     }
 

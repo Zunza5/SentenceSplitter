@@ -1,11 +1,10 @@
 """
-LLM embedding extraction and perplexity computation.
+LLM embedding extraction.
 
 Handles:
-  - Loading the LLM model
-  - Extracting last-layer hidden states
+  - Loading the embedding model (Qwen3-Embedding-4B)
+  - Extracting last-layer hidden states (per-token)
   - Expanding token-level embeddings to character-level
-  - Computing perplexity for the verification step
   - Offline embedding caching
 """
 
@@ -15,10 +14,13 @@ from typing import Any, Tuple, Optional
 
 import torch
 import torch.nn.functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 
-MODEL_NAME = "mlx-community/Qwen3.5-2B-MLX-8bit"
-#MODEL_NAME = 'Qwen/Qwen3.5-2B'
+MODEL_NAME = "mlx-community/Qwen3-Embedding-0.6B-mxfp8"
+
+# Instruction prompt for sentence splitting task
+INSTRUCT_PROMPT = "Instruct: Identify sentence boundaries in the following text\nQuery:"
+
 CACHE_DIR = Path(__file__).parent.parent / "embedding_cache"
 
 
@@ -33,29 +35,30 @@ def get_device() -> torch.device:
 
 def load_language_model(backend: str = "transformers", device: torch.device | None = None) -> Tuple[Any, Any]:
     """
-    Load the Language Model and tokenizer dynamically handling transformers or mlx.
+    Load the Embedding Model and tokenizer.
     """
     print(f"Loading {MODEL_NAME} with backend '{backend}'...")
     
-    # We always use the Hugging Face tokenizer to maintain full API compatibility 
-    # (like return_offsets_mapping and call semantics).
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    
     if backend == "mlx":
-        import mlx_lm
-        model, _ = mlx_lm.load(MODEL_NAME)
-        print("  → MLX Model loaded.")
+        from mlx_embeddings import load as mlx_load
+        model, tokenizer = mlx_load(MODEL_NAME)
+        print("  → MLX Embedding Model loaded.")
         return model, tokenizer
     else:
+        from transformers import AutoModel
+        
+        # Use HF tokenizer with left padding (required for embedding models)
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, padding_side='left')
+        
         if device is None:
             device = get_device()
         
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModel.from_pretrained(
             MODEL_NAME,
             device_map="auto"
         )
         model.eval()
-        print("  → Transformers Model loaded.")
+        print("  → Transformers Embedding Model loaded.")
         return model, tokenizer
 
 
@@ -64,31 +67,37 @@ def extract_token_embeddings(
     model: Any,
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
-    backend: str = "transformers"
+    backend: str = "transformers",
+    layer_idx: Optional[int] = None
 ) -> torch.Tensor:
     """
-    Extract last-layer hidden state embeddings safely mapped between backends.
+    Extract last-layer hidden state embeddings (per-token) from the embedding model.
     """
     if backend == "mlx":
         import mlx.core as mx
         import numpy as np
         
-        # MLX strictly runs on np/mx arrays natively
         inputs = mx.array(input_ids.cpu().numpy())
         
-        # Locate the transformer trunk depending on mlx-lm model architecture
+        # Access the transformer trunk of the embedding model
         trunk = getattr(model, "model", None)
         if hasattr(model, "language_model"):
             trunk = getattr(model.language_model, "model", trunk)
             
         if trunk is not None:
-            # Forward directly through Qwen/Llama trunk without lm_head
-            hidden = trunk(inputs)
+            if layer_idx is not None:
+                # Manual forward pass up to layer_idx
+                # This assumes a standard Llama/Qwen-like structure in MLX
+                # embed_tokens -> layers -> norm
+                x = trunk.embed_tokens(inputs)
+                for i in range(layer_idx + 1):
+                    x = trunk.layers[i](x, mask=None)
+                hidden = x
+            else:
+                hidden = trunk(inputs)
         else:
             raise ValueError("MLX model trunk not found.")
             
-        # Float conversions: explicitly cast to float32 in MLX *before* numpy, 
-        # because numpy/torch lack native bfloat16 stable support in many cases.
         hidden_fp32 = hidden.astype(mx.float32)
         hidden_torch = torch.from_numpy(np.array(hidden_fp32))
         return hidden_torch.to(input_ids.device)
@@ -97,9 +106,20 @@ def extract_token_embeddings(
         outputs = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            output_hidden_states=True,
+            output_hidden_states=(layer_idx is not None)
         )
-        hidden = outputs.hidden_states[-1]
+        
+        if layer_idx is not None:
+            # hidden_states is a tuple: (embedding_layer, layer_0, ..., layer_N-1)
+            # layer_idx = 0 usually means after the first transformer block
+            # For Qwen, hidden_states[0] is the base embeddings.
+            # layer_idx=N-1 would be the output of the last block.
+            # transformers index them as 0 to num_hidden_layers
+            # We want the output of the specific block
+            hidden = outputs.hidden_states[layer_idx + 1]
+        else:
+            # AutoModel gives us last_hidden_state directly
+            hidden = outputs.last_hidden_state
         return hidden.float()
 
 
@@ -130,115 +150,6 @@ def expand_to_char_embeddings(
     return char_embeddings
 
 
-@torch.no_grad()
-def compute_perplexity(
-    model: Any,
-    tokenizer: Any,
-    text: str,
-    device: torch.device | None = None,
-    backend: str = "transformers"
-) -> float:
-    # We maintain this helper but now redirect to batch logic for simplicity.
-    return compute_perplexity_batch(model, tokenizer, [text], device, backend)[0]
-
-
-@torch.no_grad()
-def compute_perplexity_batch(
-    model: Any,
-    tokenizer: Any,
-    texts: list[str],
-    device: torch.device | None = None,
-    backend: str = "transformers"
-) -> list[float]:
-    """
-    Compute the perplexity of a list of text strings in batch.
-    """
-    if not texts:
-        return []
-
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        
-    pad_id = getattr(tokenizer, "pad_token_id", tokenizer.eos_token_id)
-
-    if backend == "mlx":
-        import mlx.core as mx
-        import mlx.nn as nn
-        import numpy as np
-        
-        encoding = tokenizer(
-            texts,
-            return_tensors="np",
-            padding=True,
-            add_special_tokens=True
-        )
-        input_ids = mx.array(encoding["input_ids"])
-        
-        if input_ids.shape[1] < 2:
-            # Not enough tokens to shift and compute loss
-            return [1e6] * len(texts)
-        
-        logits = model(input_ids)
-        
-        shift_logits = logits[..., :-1, :]
-        shift_labels = input_ids[..., 1:]
-        
-        losses = nn.losses.cross_entropy(shift_logits, shift_labels)
-        mask = (shift_labels != pad_id)
-        
-        masked_losses = losses * mask
-        sum_loss = mx.sum(masked_losses, axis=1)
-        valid_tokens = mx.sum(mask, axis=1)
-        
-        seq_loss = sum_loss / mx.maximum(valid_tokens, 1.0)
-        perplexities = mx.exp(seq_loss)
-        return np.array(perplexities).tolist()
-
-    if device is None:
-        device = next(model.parameters()).device
-
-    # Tokenize with padding
-    encoding = tokenizer(
-        texts,
-        return_tensors="pt",
-        padding=True,
-        add_special_tokens=True
-    )
-    input_ids = encoding["input_ids"].to(device)
-    attention_mask = encoding["attention_mask"].to(device)
-
-    if input_ids.shape[1] < 2:
-        return [1e6] * len(texts)
-
-    labels = input_ids.clone()
-    labels[attention_mask == 0] = -100
-
-    outputs = model(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-    )
-    
-    logits = outputs.logits 
-    shift_logits = logits[..., :-1, :].contiguous()
-    shift_labels = labels[..., 1:].contiguous()
-    
-    loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
-    shift_logits = shift_logits.view(-1, shift_logits.size(-1))
-    shift_labels = shift_labels.view(-1)
-    
-    token_loss = loss_fct(shift_logits, shift_labels)
-    token_loss = token_loss.view(input_ids.shape[0], -1) 
-    
-    shift_mask = (shift_labels != -100).view(input_ids.shape[0], -1).float()
-    sum_loss = (token_loss * shift_mask).sum(dim=1)
-    active_tokens = shift_mask.sum(dim=1)
-    
-    seq_loss = sum_loss / torch.clamp(active_tokens, min=1.0)
-    perplexities = torch.exp(seq_loss).cpu().tolist()
-    
-    return perplexities
-
-
 def extract_and_cache_embeddings(
     model: Any,
     dataloader,
@@ -246,6 +157,7 @@ def extract_and_cache_embeddings(
     cache_name: str = "train",
     backend: str = "transformers",
     base_cache_dir: Path | None = None,
+    layer_idx: Optional[int] = None,
 ) -> Path:
     """
     Extract embeddings for all batches in a dataloader and save to disk.
@@ -260,7 +172,10 @@ def extract_and_cache_embeddings(
     """
     if base_cache_dir is None:
         base_cache_dir = CACHE_DIR
-    cache_path = base_cache_dir / cache_name
+    
+    # Suffix cache name with layer if not default
+    actual_cache_name = cache_name if layer_idx is None else f"{cache_name}_L{layer_idx}"
+    cache_path = base_cache_dir / actual_cache_name
     cache_path.mkdir(parents=True, exist_ok=True)
 
     for batch_idx, batch in enumerate(dataloader):
@@ -273,7 +188,7 @@ def extract_and_cache_embeddings(
         char_to_token = batch["char_to_token"].to(device)
 
         # Extract token embeddings
-        tok_emb = extract_token_embeddings(model, input_ids, attention_mask, backend=backend)
+        tok_emb = extract_token_embeddings(model, input_ids, attention_mask, backend=backend, layer_idx=layer_idx)
 
         # Expand to character level
         char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
@@ -293,4 +208,63 @@ def extract_and_cache_embeddings(
             print(f"  Cached {batch_idx + 1} batches...")
 
     print(f"  → Embeddings cached to {cache_path}")
+    return cache_path
+
+
+def extract_and_cache_token_embeddings(
+    model: Any,
+    dataloader,
+    device: torch.device,
+    cache_name: str = "train",
+    backend: str = "transformers",
+    base_cache_dir: Path | None = None,
+    layer_idx: Optional[int] = None,
+) -> Path:
+    """
+    Extract token-level embeddings and save to disk (no char expansion).
+
+    Each batch is saved as a dict with:
+        - token_embeddings: (batch, num_tokens, hidden_dim)
+        - token_labels: (batch, num_tokens)
+        - token_mask: (batch, num_tokens)
+        - text: list of original text strings
+
+    Returns:
+        Path to the cache directory
+    """
+    if base_cache_dir is None:
+        base_cache_dir = CACHE_DIR
+    
+    # Suffix cache name with layer if not default
+    actual_cache_name = cache_name if layer_idx is None else f"{cache_name}_L{layer_idx}"
+    cache_path = base_cache_dir / actual_cache_name
+    cache_path.mkdir(parents=True, exist_ok=True)
+
+    for batch_idx, batch in enumerate(dataloader):
+        save_file = cache_path / f"batch_{batch_idx:05d}.pt"
+        if save_file.exists():
+            continue
+
+        input_ids = batch["input_ids"].to(device)
+        attention_mask = batch["attention_mask"].to(device)
+
+        # Extract token embeddings (no char expansion)
+        tok_emb = extract_token_embeddings(model, input_ids, attention_mask, backend=backend, layer_idx=layer_idx)
+
+        # Save to disk (on CPU to save GPU memory)
+        torch.save(
+            {
+                "token_embeddings": tok_emb.cpu(),
+                "token_labels": batch["token_labels"],
+                "token_mask": batch["token_mask"],
+                "token_offsets": batch["token_offsets"],
+                "text": batch.get("text", []),
+            },
+            save_file,
+        )
+
+        if (batch_idx + 1) % 10 == 0:
+            print(f"  Cached {batch_idx + 1} batches...")
+
+    print(f"  → Token embeddings cached to {cache_path}")
     return cache_path
