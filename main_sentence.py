@@ -3,14 +3,16 @@ Sentence Splitter — CLI entry point.
 """
 
 import argparse
-import sys
-from pathlib import Path
-import torch
 
-from train_sentence import extract_sentence_embeddings, train_sentence_mlp, SENTENCE_CACHE_DIR, BEST_SENTENCE_CKPT
-from inference_sentence import load_sentence_mlp, split_into_sentences
-from wordSplitter.train import evaluate, CachedEmbeddingDataset, cached_collate_fn
-from wordSplitter.embeddings import load_language_model, get_device
+from train_sentence import (
+    extract_sentence_embeddings,
+    train_sentence_mlp,
+    SENTENCE_CACHE_DIR,
+    CachedEmbeddingDataset,
+    cached_collate_fn,
+    evaluate,
+)
+from inference_sentence import load_sentence_mlp, split_into_sentences, load_language_model, get_device
 from torch.utils.data import DataLoader, ConcatDataset
 
 def cmd_train(args):
@@ -27,12 +29,14 @@ def cmd_train(args):
             epochs=args.epochs,
             batch_size=args.batch_size,
             lr=args.lr,
+            d_model=args.d_model,
             dropout=args.dropout,
             pos_weight=args.pos_weight,
             train_splits=[s.strip() for s in args.train_splits.split(",")],
             dev_splits=[s.strip() for s in args.dev_splits.split(",")],
             augment_prob=args.augment_prob,
             aux_weight=args.aux_weight,
+            balanced_batches=args.balanced_batches,
         )
 
 def cmd_eval(args):
@@ -80,6 +84,7 @@ def main():
     train_parser.add_argument("--epochs", type=int, default=50)
     train_parser.add_argument("--batch-size", type=int, default=16)
     train_parser.add_argument("--lr", type=float, default=1e-4)
+    train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
     train_parser.add_argument("--dropout", type=float, default=0.2)
     train_parser.add_argument("--pos-weight", type=float, default=0.5)
     train_parser.add_argument("--aux-weight", type=float, default=0.01, help="MoE load-balancing loss weight")
@@ -87,6 +92,12 @@ def main():
     train_parser.add_argument("--extract-batch-size", type=int, default=8)
     train_parser.add_argument("--max-chars", type=int, default=512)
     train_parser.add_argument("--stride-chars", type=int, default=256)
+    train_parser.add_argument(
+        "--balanced-batches",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Balance source datasets via DataLoader sampling (default: enabled)",
+    )
     train_parser.add_argument("--train-splits", type=str, default="it-isdt-train,it-vit-train,it-partut-train,it-markit-train,en-ewt-train,en-gum-train,en-partut-train, it-old-train, it-parlamint-train")
     train_parser.add_argument("--dev-splits", type=str, default="it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev")
 

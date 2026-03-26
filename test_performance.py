@@ -5,7 +5,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from wordSplitter.embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from sentence_embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
 from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
@@ -24,9 +24,18 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
 
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     hidden_dim = checkpoint.get("hidden_dim", 2048)
+    d_model = checkpoint.get("d_model", checkpoint.get("cnn_dim", 256))
     dropout = checkpoint.get("dropout", 0.3)
+    num_experts = checkpoint.get("num_experts", 8)
+    top_k = checkpoint.get("top_k", min(2, num_experts))
     
-    mlp = SpacePredictorMLP(hidden_dim=hidden_dim, dropout=dropout).to(device)
+    mlp = SpacePredictorMLP(
+        hidden_dim=hidden_dim,
+        d_model=d_model,
+        dropout=dropout,
+        num_experts=num_experts,
+        top_k=top_k,
+    ).to(device)
     mlp.load_state_dict(checkpoint["model_state_dict"])
     mlp.eval()
     print(f"Loaded MLP from {checkpoint_path} (F1: {checkpoint.get('f1', 'N/A'):.4f})")

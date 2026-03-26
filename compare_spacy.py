@@ -8,8 +8,8 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import matplotlib.pyplot as plt
 import numpy as np
 
-from wordSplitter.embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
-from wordSplitter.model import SpacePredictorMLP
+from sentence_embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
 def get_spacy_model(language):
@@ -421,7 +421,17 @@ def main():
     print("\nLoading LLM MLP...")
     checkpoint_path = Path("checkpoints/best_sentence_mlp.pt")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
-    mlp = SpacePredictorMLP(hidden_dim=checkpoint.get("hidden_dim", 2048), dropout=0.0).to(device)
+    hidden_dim = checkpoint.get("hidden_dim", 2048)
+    d_model = checkpoint.get("d_model", checkpoint.get("cnn_dim", 256))
+    num_experts = checkpoint.get("num_experts", 8)
+    top_k = checkpoint.get("top_k", min(2, num_experts))
+    mlp = SpacePredictorMLP(
+        hidden_dim=hidden_dim,
+        d_model=d_model,
+        dropout=0.0,
+        num_experts=num_experts,
+        top_k=top_k,
+    ).to(device)
     mlp.load_state_dict(checkpoint["model_state_dict"])
     mlp.eval()
     

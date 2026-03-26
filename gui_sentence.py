@@ -5,8 +5,7 @@ import torch
 import time
 
 # Import pipeline functions
-from wordSplitter.embeddings import get_device, load_language_model
-from inference_sentence import load_sentence_mlp, split_into_sentences
+from inference_sentence import load_sentence_mlp, split_into_sentences, load_language_model, get_device
 
 class SentenceSplitterGUI:
     def __init__(self, root):
