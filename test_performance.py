@@ -5,7 +5,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from sentence_embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from sentence_embeddings import load_language_model, extract_token_embeddings, get_device
 from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
@@ -67,9 +67,8 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
         for i, batch in enumerate(dataloader):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            char_to_token = batch["char_to_token"].to(device)
-            labels = batch["char_labels"].to(device)
-            mask = batch["char_mask"].to(device)
+            labels = batch["token_labels"].to(device)
+            mask = batch["token_mask"].to(device)
             
             # Phase A: LLM Token Embeddings
             t0 = time.time()
@@ -77,16 +76,15 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
             t1 = time.time()
             total_extract_time += (t1 - t0)
             
-            # Phase B: Expand to Char Embeddings
+            # Phase B: token-level input (no char expansion)
             t2 = time.time()
-            char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
+            token_emb = tok_emb.float()
             t3 = time.time()
             total_expand_time += (t3 - t2)
             
             # Phase C: MLP Forward
             t4 = time.time()
-            char_emb = char_emb.float() # Ensure float32 for MLP
-            preds, _ = mlp(char_emb)
+            preds, _ = mlp(token_emb, mask=mask)
             t5 = time.time()
             total_mlp_time += (t5 - t4)
             

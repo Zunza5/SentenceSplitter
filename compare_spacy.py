@@ -8,9 +8,12 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sentence_embeddings import load_language_model, extract_token_embeddings, expand_to_char_embeddings, get_device
+from sentence_embeddings import load_language_model, extract_token_embeddings, get_device
 from model import SpacePredictorMLP
-from data_sentence import get_sentence_dataloader
+from data_sentence import get_sentence_dataloader, UD_URLS
+
+
+ALL_TEST_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-test")))
 
 def get_spacy_model(language):
     model_name = "it_core_news_lg" if language == "italian" else "en_core_web_lg"
@@ -21,7 +24,7 @@ def get_spacy_model(language):
         spacy.cli.download(model_name)
         return spacy.load(model_name)
 
-def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx"):
+def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx", threshold=0.5):
     print(f"\n--- Running LLM Inference on {len(dataloader.dataset)} chunks ---")
     
     # Pre-determine total length to initialize buffers
@@ -41,17 +44,16 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
         for i, batch in enumerate(dataloader):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            char_to_token = batch["char_to_token"].to(device)
-            labels = batch["char_labels"].to(device)
-            mask = batch["char_mask"].to(device)
+            labels = batch["token_labels"].to(device)
+            mask = batch["token_mask"].to(device)
             offsets = batch["char_offset"]
+            texts = batch["spaceless"]
             
             start_batch = time.time()
             
             tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
-            char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
-            char_emb = char_emb.float()
-            preds, _ = mlp(char_emb)
+            tok_emb = tok_emb.float()
+            preds, _ = mlp(tok_emb, mask=mask)
             
             end_batch = time.time()
             total_time += (end_batch - start_batch)
@@ -61,9 +63,28 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
                 valid = mask[b]
                 p_list = preds[b][valid].cpu().tolist()
                 l_list = labels[b][valid].cpu().tolist()
+
+                local_text = texts[b]
+                enc = tokenizer(
+                    local_text,
+                    return_tensors="pt",
+                    add_special_tokens=True,
+                    return_offsets_mapping=True,
+                )
+                tok_offsets = enc["offset_mapping"].squeeze(0).tolist()
+                valid_token_offsets = [
+                    (start, end)
+                    for start, end in tok_offsets
+                    if not (start == 0 and end == 0) and end > start and end < len(local_text)
+                ]
+
+                valid_len = min(len(p_list), len(l_list), len(valid_token_offsets))
                 
-                for j, (p, l) in enumerate(zip(p_list, l_list)):
-                    idx = offset + j
+                for j in range(valid_len):
+                    p = p_list[j]
+                    l = l_list[j]
+                    _, local_end = valid_token_offsets[j]
+                    idx = offset + local_end
                     if idx < total_text_len:
                         full_probs_sum[idx] += p
                         full_probs_count[idx] += 1
@@ -82,7 +103,7 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx")
     for j in range(total_text_len):
         if label_filled[j] and full_labels[j] >= 0:
             avg_p = full_probs_sum[j] / max(1, full_probs_count[j])
-            final_preds.append(1 if avg_p > 0.5 else 0)
+            final_preds.append(1 if avg_p > threshold else 0)
             final_labels.append(full_labels[j])
 
     precision, recall, f1, _ = precision_recall_fscore_support(
@@ -398,10 +419,11 @@ def plot_time_comparison(results):
 
 def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
-    parser.add_argument("--test-splits", type=str, default="it-isdt-test,it-postwita-test,it-vit-test,it-twittiro-test,it-partut-test,it-markit-test,en-ewt-test,en-gum-test,en-pud-test,en-partut-test", help="Comma-separated test splits")
+    parser.add_argument("--test-splits", type=str, default=ALL_TEST_SPLITS, help="Comma-separated test splits")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for LLM inference")
-    parser.add_argument("--max-chars", type=int, default=1024)
+    parser.add_argument("--max-chars", type=int, default=2048)
     parser.add_argument("--stride-chars", type=int, default=512, help="Set to < max-chars to enable overlapping window averaging")
+    parser.add_argument("--threshold", type=float, default=0.7, help="Decision threshold for LLM token boundaries")
     args = parser.parse_args()
     
     device = get_device()
@@ -462,7 +484,15 @@ def main():
             
             spacy_results = evaluate_spacy(dataloader, nlp)
             nltk_results = evaluate_nltk(dataloader, language)
-            llm_results = evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend=backend)
+            llm_results = evaluate_model(
+                dataloader,
+                llm_model,
+                tokenizer,
+                mlp,
+                device,
+                backend=backend,
+                threshold=args.threshold,
+            )
             
             print_comparison(spacy_results, nltk_results, llm_results)
             all_results.append((split, spacy_results, nltk_results, llm_results))

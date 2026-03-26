@@ -166,15 +166,18 @@ class MoELayer(nn.Module):
         hard_weights.scatter_(-1, topk_idx, topk_vals)
         hard_weights = hard_weights / hard_weights.sum(dim=-1, keepdim=True).clamp_min(1e-9)
 
-        # Run all experts
-        expert_outputs = torch.stack(
-            [expert(x) for expert in self.experts], dim=-1
-        )  # (batch, seq_len, d_model, num_experts)
+        # Sparse execution: run only experts selected by top-k in this batch.
+        if mask is not None:
+            active_selector = hard_weights * mask.unsqueeze(-1).float()
+        else:
+            active_selector = hard_weights
+        active_experts = (active_selector.sum(dim=(0, 1)) > 0).nonzero(as_tuple=False).flatten().tolist()
 
-        # Weighted combination: gate_probs[:,:,i] weights expert i
-        # gate_probs: (B, S, E) -> (B, S, 1, E) for broadcasting
-        gate_weights = hard_weights.unsqueeze(2)  # (B, S, 1, E)
-        output = (expert_outputs * gate_weights).sum(dim=-1)  # (B, S, d_model)
+        output = torch.zeros_like(x)
+        for expert_idx in active_experts:
+            expert_out = self.experts[expert_idx](x)  # (B, S, d_model)
+            weight = hard_weights[:, :, expert_idx].unsqueeze(-1)  # (B, S, 1)
+            output = output + (expert_out * weight)
 
         # ── Load-balancing auxiliary loss (Switch Transformer style) ──────
         # f_i = fraction of tokens dispatched to expert i (based on argmax)
@@ -185,6 +188,10 @@ class MoELayer(nn.Module):
             valid_probs = gate_probs[mask]  # (num_valid, num_experts)
         else:
             valid_probs = gate_probs.reshape(-1, self.num_experts)
+
+        if valid_probs.numel() == 0:
+            aux_loss = torch.tensor(0.0, device=x.device)
+            return output, aux_loss
 
         # f_i: fraction of tokens where expert i has the highest gate
         assignments = valid_probs.argmax(dim=-1)  # (num_valid,)

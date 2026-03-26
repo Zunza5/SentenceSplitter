@@ -12,8 +12,14 @@ from train_sentence import (
     cached_collate_fn,
     evaluate,
 )
+from data_sentence import UD_URLS
 from inference_sentence import load_sentence_mlp, split_into_sentences, load_language_model, get_device
 from torch.utils.data import DataLoader, ConcatDataset
+
+
+ALL_TRAIN_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-train")))
+ALL_DEV_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-dev")))
+ALL_TEST_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-test")))
 
 def cmd_train(args):
     if args.phase in ("extract", "both"):
@@ -83,28 +89,28 @@ def main():
     train_parser.add_argument("--phase", choices=["extract", "train", "both"], default="both")
     train_parser.add_argument("--epochs", type=int, default=50)
     train_parser.add_argument("--batch-size", type=int, default=16)
-    train_parser.add_argument("--lr", type=float, default=1e-4)
+    train_parser.add_argument("--lr", type=float, default=1e-5)
     train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
     train_parser.add_argument("--dropout", type=float, default=0.2)
     train_parser.add_argument("--pos-weight", type=float, default=0.5)
-    train_parser.add_argument("--aux-weight", type=float, default=0.01, help="MoE load-balancing loss weight")
+    train_parser.add_argument("--aux-weight", type=float, default=0.001, help="MoE load-balancing loss weight")
     train_parser.add_argument("--augment_prob", type=float, default=0.0)
     train_parser.add_argument("--extract-batch-size", type=int, default=8)
-    train_parser.add_argument("--max-chars", type=int, default=512)
-    train_parser.add_argument("--stride-chars", type=int, default=256)
+    train_parser.add_argument("--max-chars", type=int, default=1024)
+    train_parser.add_argument("--stride-chars", type=int, default=512)
     train_parser.add_argument(
         "--balanced-batches",
         action=argparse.BooleanOptionalAction,
         default=True,
         help="Balance source datasets via DataLoader sampling (default: enabled)",
     )
-    train_parser.add_argument("--train-splits", type=str, default="it-isdt-train,it-vit-train,it-partut-train,it-markit-train,en-ewt-train,en-gum-train,en-partut-train, it-old-train, it-parlamint-train")
-    train_parser.add_argument("--dev-splits", type=str, default="it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev")
+    train_parser.add_argument("--train-splits", type=str, default=ALL_TRAIN_SPLITS)
+    train_parser.add_argument("--dev-splits", type=str, default=ALL_DEV_SPLITS)
 
     # eval
     eval_parser = subparsers.add_parser("eval")
     eval_parser.add_argument("--batch-size", type=int, default=16)
-    eval_parser.add_argument("--test-splits", type=str, default="it-isdt-test,it-postwita-test,it-vit-test,it-twittiro-test,it-partut-test,it-markit-test,en-ewt-test,en-gum-test,en-partut-test,en-pud-test")
+    eval_parser.add_argument("--test-splits", type=str, default=ALL_TEST_SPLITS)
 
     # split
     split_parser = subparsers.add_parser("split")

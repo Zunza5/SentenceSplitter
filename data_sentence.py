@@ -43,6 +43,7 @@ UD_URLS = {
     "it-twittiro-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-TWITTIRO/refs/heads/master/it_twittiro-ud-test.conllu",
     "it-old-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-Old/refs/heads/master/it_old-ud-train.conllu",
     "it-parlamint-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-ParlaMint/refs/heads/master/it_parlamint-ud-train.conllu",
+    "it-pud-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_Italian-PUD/refs/heads/master/it_pud-ud-test.conllu",
     "en-ewt-train": str(Path(__file__).parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-train.sent_split"),
     "en-ewt-dev": str(Path(__file__).parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-dev.sent_split"),
     "en-ewt-test": str(Path(__file__).parent / "sent_split_data" / "UD_English-EWT" / "en_ewt-ud-test.sent_split"),
@@ -53,6 +54,12 @@ UD_URLS = {
     "en-partut-dev": str(Path(__file__).parent / "sent_split_data" / "UD_English-ParTUT" / "en_partut-ud-dev.sent_split"),
     "en-partut-test": str(Path(__file__).parent / "sent_split_data" / "UD_English-ParTUT" / "en_partut-ud-test.sent_split"),
     "en-pud-test": str(Path(__file__).parent / "sent_split_data" / "UD_English-PUD" / "en_pud-ud-test.sent_split"),
+    "en-redd-dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-GUMReddit/refs/heads/master/en_gumreddit-ud-dev.conllu",
+    "en-redd-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-GUMReddit/refs/heads/master/en_gumreddit-ud-test.conllu",
+    "en-redd-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-GUMReddit/refs/heads/master/en_gumreddit-ud-train.conllu",
+    "en-lines-train": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-Lines/refs/heads/master/en_lines-ud-train.conllu",
+    "en-lines-dev": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-Lines/refs/heads/master/en_lines-ud-dev.conllu",
+    "en-lines-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-Lines/refs/heads/master/en_lines-ud-test.conllu",
 }
 
 CACHE_DIR = Path(__file__).parent / "data_cache"
@@ -256,6 +263,45 @@ def build_sentence_char_to_token_map(
     return input_ids, char_to_token
 
 
+def build_sentence_token_labels(
+    text: str,
+    labels: list[int],
+    tokenizer: AutoTokenizer,
+) -> tuple[list[int], list[int]]:
+    """
+    Build token-level labels aligned with tokenizer offsets.
+
+    Label semantics:
+      - 1: sentence boundary after this token
+      - 0: no boundary
+      - -1: ignore (special/padding/no valid next char)
+    """
+    encoding = tokenizer(
+        text,
+        return_tensors="pt",
+        add_special_tokens=True,
+        return_offsets_mapping=True,
+    )
+    input_ids = encoding["input_ids"].squeeze(0).tolist()
+    offsets = encoding["offset_mapping"].squeeze(0).tolist()
+
+    token_labels: list[int] = []
+    text_len = len(text)
+    for start, end in offsets:
+        if start == 0 and end == 0:
+            token_labels.append(-1)
+            continue
+
+        if end >= text_len:
+            token_labels.append(-1)
+            continue
+
+        lbl = labels[end]
+        token_labels.append(lbl if lbl in (0, 1) else -1)
+
+    return input_ids, token_labels
+
+
 class SentenceSplitDataset(Dataset):
     """
     PyTorch Dataset for the sentence splitting task.
@@ -302,11 +348,17 @@ class SentenceSplitDataset(Dataset):
             input_ids, char_to_token = build_sentence_char_to_token_map(
                 text, self.tokenizer
             )
+            token_input_ids, token_labels = build_sentence_token_labels(
+                text, labels, self.tokenizer
+            )
+            if token_input_ids != input_ids:
+                raise ValueError("Tokenization mismatch between char map and token labels")
             self.samples.append(
                 {
                     "input_ids": torch.tensor(input_ids, dtype=torch.long),
                     "char_labels": torch.tensor(labels, dtype=torch.float32),
                     "char_to_token": torch.tensor(char_to_token, dtype=torch.long),
+                    "token_labels": torch.tensor(token_labels, dtype=torch.float32),
                     "spaceless": text,
                     "char_offset": char_offset,
                 }
@@ -332,12 +384,16 @@ def collate_sentence_fn(batch: list[dict]) -> dict:
     char_to_token = pad_sequence(
         [s["char_to_token"] for s in batch], batch_first=True, padding_value=0
     )
+    token_labels = pad_sequence(
+        [s["token_labels"] for s in batch], batch_first=True, padding_value=-1.0
+    )
     attention_mask = pad_sequence(
         [torch.ones_like(s["input_ids"]) for s in batch],
         batch_first=True,
         padding_value=0,
     )
     char_mask = char_labels >= 0
+    token_mask = token_labels >= 0
 
     return {
         "input_ids": input_ids,
@@ -345,6 +401,8 @@ def collate_sentence_fn(batch: list[dict]) -> dict:
         "char_labels": char_labels,
         "char_to_token": char_to_token,
         "char_mask": char_mask,
+        "token_labels": token_labels,
+        "token_mask": token_mask,
         "spaceless": [s["spaceless"] for s in batch],
         "char_offset": torch.tensor([s.get("char_offset", 0) for s in batch], dtype=torch.long),
     }

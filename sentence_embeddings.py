@@ -8,7 +8,7 @@ from typing import Any, Tuple
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-MODEL_NAME = "mlx-community/Qwen3.5-2B-MLX-8bit"
+MODEL_NAME = "mlx-community/Qwen3.5-2B-OptiQ-4bit"
 CACHE_DIR = Path(__file__).parent / "sentence_embedding_cache"
 
 
@@ -62,7 +62,10 @@ def extract_token_embeddings(
         attention_mask=attention_mask,
         output_hidden_states=True,
     )
-    return outputs.hidden_states[-1].float()
+    hidden_states = outputs.hidden_states
+    num_layers_to_average = min(4, len(hidden_states))
+    stacked = torch.stack(hidden_states[-num_layers_to_average:], dim=0)
+    return stacked.mean(dim=0).float()
 
 
 def expand_to_char_embeddings(token_embeddings: torch.Tensor, char_to_token: torch.Tensor) -> torch.Tensor:
@@ -92,16 +95,16 @@ def extract_and_cache_embeddings(
 
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
-        char_to_token = batch["char_to_token"].to(device)
+        token_labels = batch["token_labels"]
+        token_mask = batch["token_mask"]
 
         tok_emb = extract_token_embeddings(model, input_ids, attention_mask, backend=backend)
-        char_emb = expand_to_char_embeddings(tok_emb, char_to_token)
 
         torch.save(
             {
-                "char_embeddings": char_emb.cpu(),
-                "char_labels": batch["char_labels"],
-                "char_mask": batch["char_mask"],
+                "token_embeddings": tok_emb.cpu(),
+                "token_labels": token_labels,
+                "token_mask": token_mask,
                 "spaceless": batch.get("spaceless", []),
             },
             save_file,

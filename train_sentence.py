@@ -46,7 +46,7 @@ class CachedEmbeddingDataset(Dataset):
         self.index_map = []
         for f in self.files:
             data = torch.load(f, weights_only=True)
-            batch_size = data["char_embeddings"].shape[0]
+            batch_size = data["token_embeddings"].shape[0]
             for i in range(batch_size):
                 self.index_map.append((f, i))
             del data
@@ -57,10 +57,10 @@ class CachedEmbeddingDataset(Dataset):
     def __getitem__(self, idx):
         file_path, inner_idx = self.index_map[idx]
         data = _load_batch_file(file_path)
-        mask = data["char_mask"][inner_idx]
+        mask = data["token_mask"][inner_idx]
         sample = {
-            "char_embeddings": data["char_embeddings"][inner_idx][mask],
-            "char_labels": data["char_labels"][inner_idx][mask],
+            "token_embeddings": data["token_embeddings"][inner_idx][mask],
+            "token_labels": data["token_labels"][inner_idx][mask],
         }
         if "spaceless" in data:
             if isinstance(data["spaceless"], (list, tuple)):
@@ -86,23 +86,23 @@ def _build_balanced_sample_weights(datasets: list[Dataset]) -> torch.Tensor:
 
 
 def cached_collate_fn(batch):
-    max_len = max(s["char_embeddings"].shape[0] for s in batch)
-    hidden_dim = batch[0]["char_embeddings"].shape[-1]
+    max_len = max(s["token_embeddings"].shape[0] for s in batch)
+    hidden_dim = batch[0]["token_embeddings"].shape[-1]
 
     embeddings = torch.zeros(len(batch), max_len, hidden_dim)
     labels = torch.full((len(batch), max_len), -1.0)
     mask = torch.zeros(len(batch), max_len, dtype=torch.bool)
 
     for i, sample in enumerate(batch):
-        length = sample["char_embeddings"].shape[0]
-        embeddings[i, :length] = sample["char_embeddings"]
-        labels[i, :length] = sample["char_labels"]
+        length = sample["token_embeddings"].shape[0]
+        embeddings[i, :length] = sample["token_embeddings"]
+        labels[i, :length] = sample["token_labels"]
         mask[i, :length] = True
 
     return {
-        "char_embeddings": embeddings,
-        "char_labels": labels,
-        "char_mask": mask,
+        "token_embeddings": embeddings,
+        "token_labels": labels,
+        "token_mask": mask,
         "spaceless": [s.get("spaceless", "") for s in batch],
     }
 
@@ -118,12 +118,12 @@ def evaluate(
     all_labels = []
 
     for batch in dataloader:
-        emb = batch["char_embeddings"].to(device)
-        char_mask = batch["char_mask"].to(device)
-        labels = batch["char_labels"].cpu()
-        mask = batch["char_mask"].cpu()
+        emb = batch["token_embeddings"].to(device)
+        token_mask = batch["token_mask"].to(device)
+        labels = batch["token_labels"].cpu()
+        mask = batch["token_mask"].cpu()
 
-        preds, _ = model(emb, mask=char_mask)
+        preds, _ = model(emb, mask=token_mask)
         preds = preds.cpu()
 
         for i in range(preds.shape[0]):
@@ -242,7 +242,7 @@ def train_sentence_mlp(
     train_ds = ConcatDataset(train_datasets)
     dev_ds = ConcatDataset([CachedEmbeddingDataset(SENTENCE_CACHE_DIR / s) for s in dev_splits])
     
-    hidden_dim = train_ds[0]["char_embeddings"].shape[-1]
+    hidden_dim = train_ds[0]["token_embeddings"].shape[-1]
     print(f"Detected model hidden_dim: {hidden_dim}")
 
     if balanced_batches:
@@ -299,9 +299,9 @@ def train_sentence_mlp(
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
         for batch in pbar:
-            emb = batch["char_embeddings"].to(device)
-            labels = batch["char_labels"].to(device)
-            mask = batch["char_mask"].to(device)
+            emb = batch["token_embeddings"].to(device)
+            labels = batch["token_labels"].to(device)
+            mask = batch["token_mask"].to(device)
 
             preds, moe_aux_loss = mlp(emb, mask=mask) 
 
