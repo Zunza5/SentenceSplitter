@@ -12,6 +12,7 @@ The MLP predicts which spaces/characters are SENTENCE BOUNDARIES
 import urllib.request
 from pathlib import Path
 from typing import Optional
+import xml.etree.ElementTree as ET
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -62,6 +63,23 @@ UD_URLS = {
     "en-lines-test": "https://raw.githubusercontent.com/UniversalDependencies/UD_English-Lines/refs/heads/master/en_lines-ud-test.conllu",
 }
 
+GENIA_DIR = Path(__file__).parent / "data_cache" / "Genia"
+GENIA_SPLIT_NAMES = {
+    "en-genia-train",
+    "en-genia-dev",
+    "en-genia-test",
+}
+
+E3C_DATASET_ID = "NLP-FBK/e3c-sentences-IT-native"
+E3C_SPLIT_TO_HF = {
+    "it-e3c-train": "train",
+    "it-e3c-dev": "validation",
+    "it-e3c-test": "test",
+}
+
+UD_URLS.update({name: f"genia://{name}" for name in GENIA_SPLIT_NAMES})
+UD_URLS.update({name: f"hf://{E3C_DATASET_ID}/{hf_split}" for name, hf_split in E3C_SPLIT_TO_HF.items()})
+
 CACHE_DIR = Path(__file__).parent / "data_cache"
 
 
@@ -73,29 +91,128 @@ def download_ud_file(split: str) -> Path:
     return path
 
 
-def parse_conllu(path: Path) -> list[list[str]]:
+def load_sentences_from_conllu_file(path: Path) -> list[list[str]]:
     with open(path, "r", encoding="utf-8") as f:
         data = conllu.parse(f.read())
     return [[tok["form"] for tok in sent if isinstance(tok["id"], int)] for sent in data]
 
 
-def parse_sent_split(path: Path) -> list[list[str]]:
+def load_sentences_from_sent_split_file(path: Path) -> list[list[str]]:
     with open(path, "r", encoding="utf-8") as f:
         content = f.read()
     raw_sentences = [s.strip() for s in content.split("<EOS>") if s.strip()]
     return [sentence.split() for sentence in raw_sentences]
 
 
+def load_sentences_from_xml_file(path: Path) -> list[list[str]]:
+    """Extract tokenized sentences from XML <sentence> tags."""
+    root = ET.parse(path).getroot()
+    sentences: list[list[str]] = []
+
+    for sent in root.findall(".//sentence"):
+        text = " ".join("".join(sent.itertext()).split())
+        if text:
+            sentences.append(text.split())
+
+    return sentences
+
+
+def load_sentences_from_hf_dataset_split(
+    dataset_id: str,
+    split_name: str,
+    text_fields: tuple[str, ...] = ("sentence", "text", "content"),
+) -> list[list[str]]:
+    """Load sentence strings from a Hugging Face dataset split and tokenize by whitespace."""
+    from datasets import load_dataset
+
+    dataset = load_dataset(dataset_id, split=split_name)
+    if len(dataset) == 0:
+        return []
+
+    chosen_text_field = next((f for f in text_fields if f in dataset.column_names), None)
+    if chosen_text_field is None:
+        first_row = dataset[0]
+        for key, value in first_row.items():
+            if isinstance(value, str):
+                chosen_text_field = key
+                break
+    if chosen_text_field is None:
+        raise ValueError(
+            f"Could not infer text field for dataset '{dataset_id}' split '{split_name}'. Columns: {dataset.column_names}"
+        )
+
+    sentences: list[list[str]] = []
+    for row in dataset:
+        text = str(row.get(chosen_text_field, "")).strip()
+        if text:
+            sentences.append(text.split())
+    return sentences
+
+
+def get_xml_corpus_files(corpus_dir: Path) -> list[Path]:
+    if not corpus_dir.exists():
+        raise FileNotFoundError(f"XML corpus directory not found: {corpus_dir}")
+    files = sorted(p for p in corpus_dir.glob("*.xml") if p.is_file())
+    if not files:
+        raise FileNotFoundError(f"No XML files found in: {corpus_dir}")
+    return files
+
+
+def split_files_by_ratio(files: list[Path], split: str, split_prefix: str) -> list[Path]:
+    n = len(files)
+    train_end = max(1, int(n * 0.8))
+    dev_end = max(train_end + 1, int(n * 0.9)) if n > 2 else n
+
+    if split == f"{split_prefix}-train":
+        return files[:train_end]
+    if split == f"{split_prefix}-dev":
+        return files[train_end:dev_end]
+    if split == f"{split_prefix}-test":
+        return files[dev_end:]
+    raise ValueError(f"Unknown split '{split}' for prefix '{split_prefix}'")
+
+
+def load_sentences_from_xml_corpus_split(split: str, corpus_dir: Path, split_prefix: str) -> list[list[str]]:
+    sentences: list[list[str]] = []
+    for xml_path in split_files_by_ratio(get_xml_corpus_files(corpus_dir), split, split_prefix):
+        sentences.extend(load_sentences_from_xml_file(xml_path))
+    return sentences
+
+
+# Backward-compatible aliases
+parse_conllu = load_sentences_from_conllu_file
+parse_sent_split = load_sentences_from_sent_split_file
+parse_genia_xml = load_sentences_from_xml_file
+
+
+def parse_genia_split(split: str) -> list[list[str]]:
+    return load_sentences_from_xml_corpus_split(split, GENIA_DIR, "en-genia")
+
+
 def get_sentences_for_split(split: str) -> list[list[str]]:
     p = Path(split)
     if p.exists() and p.is_file():
-        return parse_sent_split(p) if p.suffix == ".sent_split" else parse_conllu(p)
+        if p.suffix == ".sent_split":
+            return load_sentences_from_sent_split_file(p)
+        if p.suffix == ".xml":
+            return load_sentences_from_xml_file(p)
+        return load_sentences_from_conllu_file(p)
+
+    if split in GENIA_SPLIT_NAMES:
+        return load_sentences_from_xml_corpus_split(split, GENIA_DIR, "en-genia")
+
+    if split in E3C_SPLIT_TO_HF:
+        return load_sentences_from_hf_dataset_split(E3C_DATASET_ID, E3C_SPLIT_TO_HF[split])
 
     if split in UD_URLS:
         source = UD_URLS[split]
         source_path = Path(source)
         if source_path.exists() and source_path.is_file():
-            return parse_sent_split(source_path) if source_path.suffix == ".sent_split" else parse_conllu(source_path)
+            return (
+                load_sentences_from_sent_split_file(source_path)
+                if source_path.suffix == ".sent_split"
+                else load_sentences_from_conllu_file(source_path)
+            )
 
         if source.startswith("http"):
             parts = source.split("/")
@@ -103,13 +220,13 @@ def get_sentences_for_split(split: str) -> list[list[str]]:
             filename = parts[-1]
             local_sent_split = Path(__file__).parent / "sent_split_data" / folder_name / filename.replace(".conllu", ".sent_split")
             if local_sent_split.exists():
-                return parse_sent_split(local_sent_split)
+                return load_sentences_from_sent_split_file(local_sent_split)
 
-        return parse_conllu(download_ud_file(split))
+        return load_sentences_from_conllu_file(download_ud_file(split))
 
     matches = list((Path(__file__).parent / "sent_split_data").rglob(f"*{split}*.sent_split"))
     if matches:
-        return parse_sent_split(matches[0])
+        return load_sentences_from_sent_split_file(matches[0])
     raise ValueError(f"Could not find dataset for '{split}'.")
 
 

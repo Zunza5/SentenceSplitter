@@ -50,9 +50,9 @@ class MultiScaleConv1d(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, dropout: float = 0.3):
         super().__init__()
         
-        # Split out_channels among 3 branches to keep parameter count efficient
-        branch_channels = out_channels // 3
-        remainder = out_channels - (2 * branch_channels)
+        # Split out_channels among 4 branches to keep parameter count efficient
+        branch_channels = out_channels // 4
+        remainder = out_channels - (3 * branch_channels)
         
         # Branch 1: Local context (e.g., standard period + space)
         self.branch1 = nn.Conv1d(
@@ -66,7 +66,14 @@ class MultiScaleConv1d(nn.Module):
         
         # Branch 3: Wide context using dilation (e.g., quotes, brackets)
         self.branch3 = nn.Conv1d(
-            in_channels, remainder, kernel_size=7, padding=6, dilation=2
+            in_channels, branch_channels, kernel_size=7, padding=6, dilation=2
+        )
+
+        self.branch4 = nn.Conv1d(
+            in_channels, remainder, 
+            kernel_size=11, 
+            padding=10, 
+            dilation=2
         )
         
         # Spatial Dropout: drops entire feature channels.
@@ -81,9 +88,10 @@ class MultiScaleConv1d(nn.Module):
         out1 = self.branch1(x)
         out2 = self.branch2(x)
         out3 = self.branch3(x)
+        out4 = self.branch4(x)
         
         # Concatenate features from all scales along the channel dimension
-        merged = torch.cat([out1, out2, out3], dim=1)
+        merged = torch.cat([out1, out2, out3, out4], dim=1)
         
         # Apply Spatial Dropout to the concatenated feature maps
         return self.spatial_dropout(merged)

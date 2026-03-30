@@ -69,6 +69,7 @@ python main_sentence.py train [OPTIONS]
 * **`--epochs`**: Maximum training epochs (default: `50`).
 * **`--lr`**: Learning rate for the Adam optimizer (default: `1e-4`).
 * **`--pos-weight`**: Weight for the positive class in Focal Loss to address imbalance (default: `0.8`).
+* **`--grad-clip-norm`**: Max norm used for gradient clipping (default: `1.0`). Set to `0` or a negative value to disable clipping.
 * **`--train-splits` / `--dev-splits`**: Comma-separated lists of UD splits to use (e.g., `"train,train2,engTrain"`).
 
 **Example - Full Training with Augmentation:**

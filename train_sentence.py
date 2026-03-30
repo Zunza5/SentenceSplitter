@@ -7,9 +7,12 @@ Phase 2: Train the MLP on cached sentence-level embeddings.
 
 import argparse
 import functools
+import os
+import random
 from pathlib import Path
 from tqdm import tqdm
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, ConcatDataset, WeightedRandomSampler
@@ -26,6 +29,38 @@ from model import SpacePredictorMLP, FocalLoss
 SENTENCE_CACHE_DIR = Path(__file__).parent / "sentence_embedding_cache"
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 BEST_SENTENCE_CKPT = CHECKPOINT_DIR / "best_sentence_mlp.pt"
+
+
+def set_deterministic_seed(seed: int) -> None:
+    """Set deterministic RNG state across Python, NumPy and PyTorch."""
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    # Keep deterministic behavior when kernels support it.
+    try:
+        torch.use_deterministic_algorithms(True)
+    except Exception:
+        pass
+
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def _seed_worker(worker_id: int) -> None:
+    worker_seed = torch.initial_seed() % 2**32
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
+
+
+def _build_torch_generator(seed: int) -> torch.Generator:
+    gen = torch.Generator()
+    gen.manual_seed(seed)
+    return gen
 
 
 @functools.lru_cache(maxsize=128)
@@ -145,8 +180,16 @@ def evaluate(
     }
 
 
-def extract_sentence_embeddings(batch_size: int = 8, backend: str = "transformers", augment_prob: float = 0.0, max_chars: int = 2048, stride_chars: int = 1024):
+def extract_sentence_embeddings(
+    batch_size: int = 8,
+    backend: str = "transformers",
+    augment_prob: float = 0.0,
+    max_chars: int = 2048,
+    stride_chars: int = 1024,
+    seed: int = 42,
+):
     """Extract LLM embeddings for sentence documents and cache them."""
+    set_deterministic_seed(seed)
     device = get_device()
     model, tokenizer = load_language_model(backend, device)
 
@@ -212,18 +255,21 @@ def train_sentence_mlp(
     d_model: int = 256,
     dropout: float = 0.2,
     pos_weight: float = 10.0, # Sentence boundaries are much rarer than word boundaries
+    grad_clip_norm: float = 1.0,
     patience: int = 7,
     aux_weight: float = 0.01,
     train_splits: list[str] = None,
     dev_splits: list[str] = None,
     augment_prob: float = 0.0,
     balanced_batches: bool = True,
+    seed: int = 42,
 ):
     if train_splits is None:
         train_splits = ["train"]
     if dev_splits is None:
         dev_splits = ["dev"]
         
+    set_deterministic_seed(seed)
     device = get_device()
     CHECKPOINT_DIR.mkdir(exist_ok=True)
 
@@ -247,10 +293,12 @@ def train_sentence_mlp(
 
     if balanced_batches:
         sample_weights = _build_balanced_sample_weights(train_datasets)
+        sampler_gen = _build_torch_generator(seed)
         train_sampler = WeightedRandomSampler(
             weights=sample_weights,
             num_samples=len(sample_weights),
             replacement=True,
+            generator=sampler_gen,
         )
         train_loader = DataLoader(
             train_ds,
@@ -258,14 +306,18 @@ def train_sentence_mlp(
             sampler=train_sampler,
             collate_fn=cached_collate_fn,
             num_workers=4,
+            worker_init_fn=_seed_worker,
         )
     else:
+        train_gen = _build_torch_generator(seed)
         train_loader = DataLoader(
             train_ds,
             batch_size=batch_size,
             shuffle=True,
             collate_fn=cached_collate_fn,
             num_workers=4,
+            worker_init_fn=_seed_worker,
+            generator=train_gen,
         )
     dev_loader = DataLoader(
         dev_ds,
@@ -273,12 +325,14 @@ def train_sentence_mlp(
         shuffle=False,
         collate_fn=cached_collate_fn,
         num_workers=2,
+        worker_init_fn=_seed_worker,
     )
 
     print(f"Train samples: {len(train_ds)}, Dev samples: {len(dev_ds)}")
     print(f"Balanced datasets: {balanced_batches}")
     print(f"MoE aux_weight: {aux_weight}")
     print(f"Model d_model: {d_model}")
+    print(f"Gradient clipping max norm: {grad_clip_norm}")
 
     # Model
     mlp = SpacePredictorMLP(hidden_dim=hidden_dim, d_model=d_model, dropout=dropout).to(device)
@@ -313,7 +367,8 @@ def train_sentence_mlp(
 
             optimizer.zero_grad()
             loss_total.backward()
-            torch.nn.utils.clip_grad_norm_(mlp.parameters(), max_norm=1.0)
+            if grad_clip_norm > 0:
+                torch.nn.utils.clip_grad_norm_(mlp.parameters(), max_norm=grad_clip_norm)
             optimizer.step()
 
             total_loss += loss_total.item()

@@ -28,7 +28,8 @@ def cmd_train(args):
             backend=args.backend,
             augment_prob=args.augment_prob,
             max_chars=args.max_chars,
-            stride_chars=args.stride_chars
+            stride_chars=args.stride_chars,
+            seed=args.seed,
         )
     if args.phase in ("train", "both"):
         train_sentence_mlp(
@@ -38,11 +39,13 @@ def cmd_train(args):
             d_model=args.d_model,
             dropout=args.dropout,
             pos_weight=args.pos_weight,
+            grad_clip_norm=args.grad_clip_norm,
             train_splits=[s.strip() for s in args.train_splits.split(",")],
             dev_splits=[s.strip() for s in args.dev_splits.split(",")],
             augment_prob=args.augment_prob,
             aux_weight=args.aux_weight,
             balanced_batches=args.balanced_batches,
+            seed=args.seed,
         )
 
 def cmd_eval(args):
@@ -81,7 +84,7 @@ def cmd_split(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Sentence Splitter CLI")
-    parser.add_argument("--backend", choices=["transformers", "mlx"], default="transformers")
+    parser.add_argument("--backend", choices=["transformers", "mlx"], default="mlx")
     subparsers = parser.add_subparsers(dest="command")
 
     # train
@@ -89,15 +92,22 @@ def main():
     train_parser.add_argument("--phase", choices=["extract", "train", "both"], default="both")
     train_parser.add_argument("--epochs", type=int, default=50)
     train_parser.add_argument("--batch-size", type=int, default=16)
-    train_parser.add_argument("--lr", type=float, default=1e-5)
+    train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
-    train_parser.add_argument("--dropout", type=float, default=0.2)
-    train_parser.add_argument("--pos-weight", type=float, default=0.5)
-    train_parser.add_argument("--aux-weight", type=float, default=0.001, help="MoE load-balancing loss weight")
+    train_parser.add_argument("--dropout", type=float, default=0.3)
+    train_parser.add_argument("--pos-weight", type=float, default=0.8)
+    train_parser.add_argument(
+        "--grad-clip-norm",
+        type=float,
+        default=1.0,
+        help="Max norm for gradient clipping; set <= 0 to disable",
+    )
+    train_parser.add_argument("--aux-weight", type=float, default=0.000001, help="MoE load-balancing loss weight")
     train_parser.add_argument("--augment_prob", type=float, default=0.0)
     train_parser.add_argument("--extract-batch-size", type=int, default=8)
     train_parser.add_argument("--max-chars", type=int, default=1024)
     train_parser.add_argument("--stride-chars", type=int, default=512)
+    train_parser.add_argument("--seed", type=int, default=42, help="Deterministic seed for reproducibility")
     train_parser.add_argument(
         "--balanced-batches",
         action=argparse.BooleanOptionalAction,
@@ -105,7 +115,7 @@ def main():
         help="Balance source datasets via DataLoader sampling (default: enabled)",
     )
     train_parser.add_argument("--train-splits", type=str, default=ALL_TRAIN_SPLITS)
-    train_parser.add_argument("--dev-splits", type=str, default=ALL_DEV_SPLITS)
+    train_parser.add_argument("--dev-splits", type=str, default='it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev')
 
     # eval
     eval_parser = subparsers.add_parser("eval")
