@@ -177,66 +177,7 @@ class _PassThroughDecoderLayer(nn.Module):
         return (hidden_states,)
 
 
-class BalancedStreamDataset(torch.utils.data.IterableDataset):
-    def __init__(self, cache_dirs: list[Path], batch_size: int):
-        self.cache_dirs = cache_dirs
-        self.num_datasets = len(cache_dirs)
-        self.samples_per_ds = max(1, batch_size // self.num_datasets)
-        self.actual_batch_size = self.samples_per_ds * self.num_datasets
-        
-        max_samples = 0
-        for d in cache_dirs:
-            num_files = len(list(d.glob("batch_*.pt")))
-            max_samples = max(max_samples, num_files * 8)
-            
-        self.total_batches = int(max_samples / self.samples_per_ds) if self.samples_per_ds else 0
 
-    def __len__(self):
-        return self.total_batches * self.actual_batch_size
-
-    def __iter__(self):
-        import random
-        
-        def file_generator(d_path):
-            files = sorted(list(d_path.glob("batch_*.pt")))
-            if not files:
-                while True:
-                    yield None
-                    
-            while True:
-                random.shuffle(files)
-                for f in files:
-                    data = torch.load(f, weights_only=True, mmap=True)
-                    bs = data["token_embeddings"].shape[0]
-                    indices = list(range(bs))
-                    random.shuffle(indices)
-                    for i in indices:
-                        spaceless_val = data.get("spaceless", [""])
-                        if isinstance(spaceless_val, (list, tuple)):
-                            s_val = spaceless_val[i] if i < len(spaceless_val) else ""
-                        else:
-                            s_val = spaceless_val
-                            
-                        yield {
-                            "token_embeddings": data["token_embeddings"][i],
-                            "token_labels": data["token_labels"][i],
-                            "token_mask": data["token_mask"][i],
-                            "attention_mask": data["attention_mask"][i],
-                            "spaceless": s_val
-                        }
-
-        generators = [file_generator(d) for d in self.cache_dirs]
-        
-        for _ in range(self.total_batches):
-            batch = []
-            for g in generators:
-                for _ in range(self.samples_per_ds):
-                    val = next(g)
-                    if val is not None:
-                        batch.append(val)
-            
-            random.shuffle(batch)
-            yield from batch
 
 
 def _build_balanced_sample_weights(datasets: list[Dataset]) -> torch.Tensor:
@@ -1367,29 +1308,37 @@ def finetune_qwen_lora_cached_sentence_splitter(
 
     mlp = SpacePredictorMLP(hidden_dim=hidden_dim, d_model=d_model, dropout=dropout).to(device)
 
+    # Use PrefixHiddenDataset for both balanced and unbalanced setups
+    train_datasets = [PrefixHiddenDataset(p) for p in train_cache_dirs]
+    train_ds = ConcatDataset(train_datasets)
+
     if balanced_batches:
-        from torch.utils.data import IterableDataset
-        train_ds = BalancedStreamDataset(train_cache_dirs, batch_size)
-        if train_ds.actual_batch_size != batch_size:
-            print(f"Strict balanced batching enabled: adjusted batch_size from {batch_size} to {train_ds.actual_batch_size} to perfectly fit {len(train_cache_dirs)} datasets.")
+        # Use standard WeightedRandomSampler as done in train_sentence_mlp
+        sample_weights = _build_balanced_sample_weights(train_datasets)
+        train_sampler = WeightedRandomSampler(
+            weights=sample_weights,
+            num_samples=len(sample_weights),
+            replacement=True,
+        )
         train_loader = DataLoader(
             train_ds,
-            batch_size=train_ds.actual_batch_size,
+            batch_size=batch_size,
+            sampler=train_sampler,
             collate_fn=collate_prefix_hidden_fn,
-            num_workers=0,
+            num_workers=4,
+            pin_memory=torch.cuda.is_available(),
         )
     else:
-        train_datasets = [PrefixHiddenDataset(p) for p in train_cache_dirs]
-        train_ds = ConcatDataset(train_datasets)
-        # Fallback to random loader for un-balanced (note: might hit I/O bottleneck if un-balanced is used)
         train_loader = DataLoader(
             train_ds,
             batch_size=batch_size,
             shuffle=True,
             collate_fn=collate_prefix_hidden_fn,
-            num_workers=0,
+            num_workers=4,
+            pin_memory=torch.cuda.is_available(),
         )
 
+    # Prepare dev loader with multiprocessing
     dev_datasets = [PrefixHiddenDataset(p) for p in dev_cache_dirs]
     dev_ds = ConcatDataset(dev_datasets)
     dev_loader = DataLoader(
@@ -1397,7 +1346,8 @@ def finetune_qwen_lora_cached_sentence_splitter(
         batch_size=batch_size,
         shuffle=False,
         collate_fn=collate_prefix_hidden_fn,
-        num_workers=0,
+        num_workers=4,
+        pin_memory=torch.cuda.is_available(),
     )
 
     criterion = FocalLoss(alpha=pos_weight, gamma=2.0, reduction="none")
