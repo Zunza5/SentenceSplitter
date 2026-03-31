@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sentence_embeddings import load_language_model, extract_token_embeddings, get_device
+from sentence_embeddings import MODEL_NAME, load_language_model, extract_token_embeddings, get_device
 from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader, UD_URLS
 
@@ -424,13 +424,15 @@ def main():
     parser.add_argument("--max-chars", type=int, default=2048)
     parser.add_argument("--stride-chars", type=int, default=512, help="Set to < max-chars to enable overlapping window averaging")
     parser.add_argument("--threshold", type=float, default=0.7, help="Decision threshold for LLM token boundaries")
+    parser.add_argument("--model-name", type=str, default=MODEL_NAME, help="LLM model name for tokenizer and inference")
     args = parser.parse_args()
     
     device = get_device()
     backend = "mlx"
     
-    print("Loading LLM model and tokenizer...")
-    llm_model, tokenizer = load_language_model(backend=backend, device=device)
+    print("Loading tokenizer...")
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     
     print("\nInitializing NLTK...")
     try:
@@ -468,6 +470,10 @@ def main():
         print(f" evaluating split: {split} (Language: {language})")
         print(f"{'='*60}")
         try:
+            # Load LLM model for this split only
+            print(f"Loading LLM model for {split}...")
+            llm_model, _ = load_language_model(backend=backend, device=device, model_name=args.model_name)
+            
             if language not in loaded_spacy:
                 print(f"Loading SpaCy model for {language}...")
                 loaded_spacy[language] = get_spacy_model(language)
@@ -496,6 +502,10 @@ def main():
             
             print_comparison(spacy_results, nltk_results, llm_results)
             all_results.append((split, spacy_results, nltk_results, llm_results))
+            
+            # Free memory after each split
+            del llm_model
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
         except Exception as e:
             print(f"Failed to evaluate split {split}: {e}")
             

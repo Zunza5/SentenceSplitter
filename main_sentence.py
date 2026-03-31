@@ -7,6 +7,8 @@ import argparse
 from train_sentence import (
     extract_sentence_embeddings,
     train_sentence_mlp,
+    finetune_qwen_lora_sentence_splitter,
+    finetune_qwen_lora_cached_sentence_splitter,
     SENTENCE_CACHE_DIR,
     CachedEmbeddingDataset,
     cached_collate_fn,
@@ -28,7 +30,9 @@ def cmd_train(args):
             backend=args.backend,
             augment_prob=args.augment_prob,
             max_chars=args.max_chars,
-            stride_chars=args.stride_chars
+            stride_chars=args.stride_chars,
+            seed=args.seed,
+            model_name=args.finetune_model_name,
         )
     if args.phase in ("train", "both"):
         train_sentence_mlp(
@@ -43,6 +47,78 @@ def cmd_train(args):
             augment_prob=args.augment_prob,
             aux_weight=args.aux_weight,
             balanced_batches=args.balanced_batches,
+            seed=args.seed,
+        )
+    if args.phase == "finetune-lora":
+        finetune_qwen_lora_sentence_splitter(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            d_model=args.d_model,
+            dropout=args.dropout,
+            pos_weight=args.pos_weight,
+            aux_weight=args.aux_weight,
+            train_splits=[s.strip() for s in args.train_splits.split(",")],
+            dev_splits=[s.strip() for s in args.dev_splits.split(",")],
+            max_chars=args.max_chars,
+            stride_chars=args.stride_chars,
+            augment_prob=args.augment_prob,
+            balanced_batches=args.balanced_batches,
+            model_name=args.finetune_model_name,
+            layers_to_finetune=args.lora_last_layers,
+            lora_r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            seed=args.seed,
+            backend=args.backend,
+        )
+    if args.phase == "finetune-lora-joint":
+        if args.backend != "transformers":
+            print("[info] finetune-lora-joint requires a single autograd graph; forcing backend='transformers'.")
+        finetune_qwen_lora_sentence_splitter(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            d_model=args.d_model,
+            dropout=args.dropout,
+            pos_weight=args.pos_weight,
+            aux_weight=args.aux_weight,
+            train_splits=[s.strip() for s in args.train_splits.split(",")],
+            dev_splits=[s.strip() for s in args.dev_splits.split(",")],
+            max_chars=args.max_chars,
+            stride_chars=args.stride_chars,
+            augment_prob=args.augment_prob,
+            balanced_batches=args.balanced_batches,
+            model_name=args.finetune_model_name,
+            layers_to_finetune=args.lora_last_layers,
+            lora_r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            seed=args.seed,
+            backend="transformers",
+        )
+    if args.phase == "finetune-lora-cached":
+        finetune_qwen_lora_cached_sentence_splitter(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            d_model=args.d_model,
+            dropout=args.dropout,
+            pos_weight=args.pos_weight,
+            aux_weight=args.aux_weight,
+            train_splits=[s.strip() for s in args.train_splits.split(",")],
+            dev_splits=[s.strip() for s in args.dev_splits.split(",")],
+            max_chars=args.max_chars,
+            stride_chars=args.stride_chars,
+            augment_prob=args.augment_prob,
+            balanced_batches=args.balanced_batches,
+            model_name=args.finetune_model_name,
+            layers_to_finetune=args.lora_last_layers,
+            lora_r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            seed=args.seed,
+            backend=args.backend,
         )
 
 def cmd_eval(args):
@@ -62,7 +138,7 @@ def cmd_eval(args):
 
 def cmd_split(args):
     device = get_device()
-    llm_model, tokenizer = load_language_model(args.backend, device)
+    llm_model, tokenizer = load_language_model(args.backend, device, model_name=args.model_name)
     mlp = load_sentence_mlp(device=device)
     
     sentences = split_into_sentences(
@@ -81,23 +157,33 @@ def cmd_split(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Sentence Splitter CLI")
-    parser.add_argument("--backend", choices=["transformers", "mlx"], default="transformers")
+    parser.add_argument("--backend", choices=["transformers", "mlx"], default="transformers", help="Backend for LLM inference (default: transformers)")
     subparsers = parser.add_subparsers(dest="command")
 
     # train
     train_parser = subparsers.add_parser("train")
-    train_parser.add_argument("--phase", choices=["extract", "train", "both"], default="both")
+    train_parser.add_argument(
+        "--phase",
+        choices=["extract", "train", "both", "finetune-lora", "finetune-lora-joint", "finetune-lora-cached"],
+        default="finetune-lora-cached",
+    )
     train_parser.add_argument("--epochs", type=int, default=50)
-    train_parser.add_argument("--batch-size", type=int, default=16)
-    train_parser.add_argument("--lr", type=float, default=1e-5)
+    train_parser.add_argument("--batch-size", type=int, default=13)
+    train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
-    train_parser.add_argument("--dropout", type=float, default=0.2)
-    train_parser.add_argument("--pos-weight", type=float, default=0.5)
-    train_parser.add_argument("--aux-weight", type=float, default=0.001, help="MoE load-balancing loss weight")
+    train_parser.add_argument("--dropout", type=float, default=0.3)
+    train_parser.add_argument("--pos-weight", type=float, default=0.8)
+    train_parser.add_argument("--aux-weight", type=float, default=0.000001, help="MoE load-balancing loss weight")
     train_parser.add_argument("--augment_prob", type=float, default=0.0)
     train_parser.add_argument("--extract-batch-size", type=int, default=8)
     train_parser.add_argument("--max-chars", type=int, default=1024)
     train_parser.add_argument("--stride-chars", type=int, default=512)
+    train_parser.add_argument("--finetune-model-name", type=str, default="Qwen/Qwen3.5-0.8B-Base")
+    train_parser.add_argument("--lora-last-layers", type=int, default=2, help="How many final transformer layers to LoRA-tune")
+    train_parser.add_argument("--lora-r", type=int, default=16)
+    train_parser.add_argument("--lora-alpha", type=int, default=32)
+    train_parser.add_argument("--lora-dropout", type=float, default=0.05)
+    train_parser.add_argument("--seed", type=int, default=42, help="Deterministic seed for training")
     train_parser.add_argument(
         "--balanced-batches",
         action=argparse.BooleanOptionalAction,
@@ -105,7 +191,7 @@ def main():
         help="Balance source datasets via DataLoader sampling (default: enabled)",
     )
     train_parser.add_argument("--train-splits", type=str, default=ALL_TRAIN_SPLITS)
-    train_parser.add_argument("--dev-splits", type=str, default=ALL_DEV_SPLITS)
+    train_parser.add_argument("--dev-splits", type=str, default='it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev')
 
     # eval
     eval_parser = subparsers.add_parser("eval")
@@ -116,6 +202,7 @@ def main():
     split_parser = subparsers.add_parser("split")
     split_parser.add_argument("text", type=str)
     split_parser.add_argument("--threshold", type=float, default=0.5)
+    split_parser.add_argument("--model-name", type=str, default="Qwen/Qwen3.5-0.8B-Base")
 
     args = parser.parse_args()
     if args.command == "train":

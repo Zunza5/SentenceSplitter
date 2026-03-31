@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "Zunza5", email = "cazualdi@icloud.com"},
 ]
-dependencies = ["torch>=2.1.0", "transformers>=4.40.0", "datasets", "scikit-learn", "numpy<2.0.0", "jupyter", "conllu", "accelerate", "autoawq", "bitsandbytes", "mlx>=0.31.1", "mlx-lm>=0.31.1", "nltk>=3.9.3", "spacy<4.0.0", "matplotlib>=3.10.8", "tqdm>=4.67.3"]
+dependencies = ["torch>=2.1.0", "transformers>=4.40.0", "datasets", "scikit-learn", "numpy<2.0.0", "jupyter", "conllu", "accelerate", "autoawq", "bitsandbytes", "mlx>=0.31.1", "mlx-lm>=0.31.1", "nltk>=3.9.3", "spacy<4.0.0", "matplotlib>=3.10.8", "tqdm>=4.67.3", "peft>=0.12.0", "flash-attn>=2.8.3", "causal-conv1d>=1.6.1"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}
