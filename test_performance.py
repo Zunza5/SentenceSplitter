@@ -47,8 +47,8 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
         batch_size=batch_size,
         tokenizer=tokenizer,
         shuffle=False,
-        max_chars=10000, # Increased to avoid skipping long samples
-        chunk_size=2,  # Must be >1 so that there are sentence boundaries to predict!
+        max_chars=10000,
+        stride_chars=10000,
         augmentation_mode="original"
     )
     
@@ -76,7 +76,7 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
             t1 = time.time()
             total_extract_time += (t1 - t0)
             
-            # Phase B: token-level input (no char expansion)
+            # Phase B: model input stays token-level (no char expansion)
             t2 = time.time()
             token_emb = tok_emb.float()
             t3 = time.time()
@@ -91,7 +91,7 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
             
             # Process results for metrics
             for b in range(preds.shape[0]):
-                valid = mask[b]
+                valid = mask[b].bool()
                 p = (preds[b][valid] > 0.5).int().cpu().tolist()
                 l = labels[b][valid].int().cpu().tolist()
                 all_preds.extend(p)

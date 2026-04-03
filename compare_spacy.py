@@ -1,4 +1,5 @@
 import torch
+import gc
 import time
 import argparse
 import spacy
@@ -14,6 +15,21 @@ from data_sentence import get_sentence_dataloader, UD_URLS
 
 
 ALL_TEST_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-test")))
+
+
+def _valid_token_offsets(tokenizer, text: str):
+    enc = tokenizer(
+        text,
+        return_tensors="pt",
+        add_special_tokens=True,
+        return_offsets_mapping=True,
+    )
+    tok_offsets = enc["offset_mapping"].squeeze(0).tolist()
+    return [
+        (start, end)
+        for start, end in tok_offsets
+        if not (start == 0 and end == 0) and end > start and end < len(text)
+    ]
 
 def get_spacy_model(language):
     model_name = "it_core_news_lg" if language == "italian" else "en_core_web_lg"
@@ -44,8 +60,9 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx",
         for i, batch in enumerate(dataloader):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            labels = batch["token_labels"].to(device)
-            mask = batch["token_mask"].to(device)
+            token_mask = batch["token_mask"].to(device)
+            labels = batch["char_labels"]
+            mask = batch["char_mask"]
             offsets = batch["char_offset"]
             texts = batch["spaceless"]
             
@@ -53,43 +70,37 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx",
             
             tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
             tok_emb = tok_emb.float()
-            preds, _ = mlp(tok_emb, mask=mask)
+            preds, _ = mlp(tok_emb, mask=token_mask)
             
             end_batch = time.time()
             total_time += (end_batch - start_batch)
             
             for b in range(preds.shape[0]):
                 offset = int(offsets[b])
-                valid = mask[b]
-                p_list = preds[b][valid].cpu().tolist()
-                l_list = labels[b][valid].cpu().tolist()
+                valid_char_len = int(mask[b].sum().item())
+                l_list = labels[b][:valid_char_len].int().tolist()
 
                 local_text = texts[b]
-                enc = tokenizer(
-                    local_text,
-                    return_tensors="pt",
-                    add_special_tokens=True,
-                    return_offsets_mapping=True,
-                )
-                tok_offsets = enc["offset_mapping"].squeeze(0).tolist()
-                valid_token_offsets = [
-                    (start, end)
-                    for start, end in tok_offsets
-                    if not (start == 0 and end == 0) and end > start and end < len(local_text)
-                ]
+                valid_tok = token_mask[b].bool()
+                p_tok = preds[b][valid_tok].cpu().tolist()
+                tok_offsets = _valid_token_offsets(tokenizer, local_text)
+                valid_tok_len = min(len(p_tok), len(tok_offsets))
 
-                valid_len = min(len(p_list), len(l_list), len(valid_token_offsets))
-                
-                for j in range(valid_len):
-                    p = p_list[j]
-                    l = l_list[j]
-                    _, local_end = valid_token_offsets[j]
-                    idx = offset + local_end
+                # Project token probabilities to characters: only token-end positions
+                # carry model score, internal characters stay at 0.
+                p_char = [0.0] * valid_char_len
+                for j in range(valid_tok_len):
+                    _, local_end = tok_offsets[j]
+                    if local_end < valid_char_len:
+                        p_char[local_end] = max(p_char[local_end], float(p_tok[j]))
+
+                for j in range(valid_char_len):
+                    idx = offset + j
                     if idx < total_text_len:
-                        full_probs_sum[idx] += p
+                        full_probs_sum[idx] += p_char[j]
                         full_probs_count[idx] += 1
                         if not label_filled[idx]:
-                            full_labels[idx] = int(l)
+                            full_labels[idx] = int(l_list[j])
                             label_filled[idx] = True
                 
                 num_processed += 1
@@ -147,7 +158,6 @@ def evaluate_spacy(dataloader, nlp_model):
             text = texts[b]
             offset = int(offsets[b])
             valid_len = int(mask[b].sum().item())
-            
             l_list = labels[b][:valid_len].int().tolist()
             
             # Run SpaCy
@@ -165,7 +175,7 @@ def evaluate_spacy(dataloader, nlp_model):
                         else:
                             p[boundary_idx] = 1 
                             
-            # Accumulate
+            # Accumulate char-level predictions directly on text positions.
             for j in range(valid_len):
                 idx = offset + j
                 if idx < total_text_len:
@@ -252,7 +262,8 @@ def evaluate_nltk(dataloader, language="italian"):
                             else:
                                 p[boundary_idx] = 1
                         current_pos = boundary_idx
-                            
+
+            # Accumulate char-level predictions directly on text positions.
             for j in range(valid_len):
                 idx = offset + j
                 if idx < total_text_len:
@@ -420,14 +431,14 @@ def plot_time_comparison(results):
 def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
     parser.add_argument("--test-splits", type=str, default=ALL_TEST_SPLITS, help="Comma-separated test splits")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for LLM inference")
-    parser.add_argument("--max-chars", type=int, default=2048)
+    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for LLM inference")
+    parser.add_argument("--max-chars", type=int, default=1024, help="Max characters per chunk for LLM inference")
     parser.add_argument("--stride-chars", type=int, default=512, help="Set to < max-chars to enable overlapping window averaging")
-    parser.add_argument("--threshold", type=float, default=0.7, help="Decision threshold for LLM token boundaries")
+    parser.add_argument("--threshold", type=float, default=0.5, help="Decision threshold for LLM token boundaries")
     args = parser.parse_args()
     
     device = get_device()
-    backend = "mlx"
+    backend = "transformers"
     
     print("Loading LLM model and tokenizer...")
     llm_model, tokenizer = load_language_model(backend=backend, device=device)
@@ -496,6 +507,14 @@ def main():
             
             print_comparison(spacy_results, nltk_results, llm_results)
             all_results.append((split, spacy_results, nltk_results, llm_results))
+
+            # Manual cleanup to free memory between datasets
+            del dataloader
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+                torch.mps.empty_cache()
+            gc.collect()
         except Exception as e:
             print(f"Failed to evaluate split {split}: {e}")
             

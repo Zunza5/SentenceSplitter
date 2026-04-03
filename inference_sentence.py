@@ -65,7 +65,7 @@ def _token_boundary_probs(
     offsets = encoding["offset_mapping"].squeeze(0).tolist()
 
     tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
-    outputs = mlp(tok_emb, mask=attention_mask.bool())
+    outputs = mlp(tok_emb.float(), mask=attention_mask.bool())
     probs = outputs[0] if isinstance(outputs, tuple) else outputs
     probs = probs.squeeze(0).detach().cpu().tolist()
 

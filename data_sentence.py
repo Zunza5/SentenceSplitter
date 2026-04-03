@@ -409,11 +409,16 @@ def build_sentence_token_labels(
             token_labels.append(-1)
             continue
 
-        if end >= text_len:
+        if end > text_len:
             token_labels.append(-1)
             continue
 
-        lbl = labels[end]
+        # Robust boundary assignment for tokenizers that may merge leading spaces
+        # with the following token: mark token positive if any boundary exists in
+        # its covered span or immediately after its end.
+        safe_end = min(end + 1, text_len)
+        span_labels = labels[start:safe_end]
+        lbl = 1 if 1 in span_labels else 0
         token_labels.append(lbl if lbl in (0, 1) else -1)
 
     return input_ids, token_labels

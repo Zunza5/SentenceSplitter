@@ -84,7 +84,7 @@ def cmd_split(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Sentence Splitter CLI")
-    parser.add_argument("--backend", choices=["transformers", "mlx"], default="mlx")
+    parser.add_argument("--backend", choices=["transformers", "mlx"], default="transformers")
     subparsers = parser.add_subparsers(dest="command")
 
     # train
@@ -93,16 +93,16 @@ def main():
     train_parser.add_argument("--epochs", type=int, default=50)
     train_parser.add_argument("--batch-size", type=int, default=16)
     train_parser.add_argument("--lr", type=float, default=1e-4)
-    train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
-    train_parser.add_argument("--dropout", type=float, default=0.3)
-    train_parser.add_argument("--pos-weight", type=float, default=0.8)
+    train_parser.add_argument("--d-model", type=int, default=512, help="MoE/CNN internal dimension")
+    train_parser.add_argument("--dropout", type=float, default=0.2)
+    train_parser.add_argument("--pos-weight", type=float, default=1.5)
     train_parser.add_argument(
         "--grad-clip-norm",
         type=float,
         default=1.0,
         help="Max norm for gradient clipping; set <= 0 to disable",
     )
-    train_parser.add_argument("--aux-weight", type=float, default=0.000001, help="MoE load-balancing loss weight")
+    train_parser.add_argument("--aux-weight", type=float, default=0.00001, help="MoE load-balancing loss weight")
     train_parser.add_argument("--augment_prob", type=float, default=0.0)
     train_parser.add_argument("--extract-batch-size", type=int, default=8)
     train_parser.add_argument("--max-chars", type=int, default=1024)
@@ -114,7 +114,7 @@ def main():
         default=True,
         help="Balance source datasets via DataLoader sampling (default: enabled)",
     )
-    train_parser.add_argument("--train-splits", type=str, default=ALL_TRAIN_SPLITS)
+    train_parser.add_argument("--train-splits", type=str, default='it-isdt-train,it-vit-train,it-partut-train,it-markit-train, it-old-train,it-parlamint-train, it-e3c-train, en-ewt-train,en-gum-train,en-partut-train, en-genia-train, en-lines-train')
     train_parser.add_argument("--dev-splits", type=str, default='it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev')
 
     # eval

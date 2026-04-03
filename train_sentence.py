@@ -153,7 +153,7 @@ def evaluate(
     all_labels = []
 
     for batch in dataloader:
-        emb = batch["token_embeddings"].to(device)
+        emb = batch["token_embeddings"].to(device).float()
         token_mask = batch["token_mask"].to(device)
         labels = batch["token_labels"].cpu()
         mask = batch["token_mask"].cpu()
@@ -353,11 +353,11 @@ def train_sentence_mlp(
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
         for batch in pbar:
-            emb = batch["token_embeddings"].to(device)
+            emb = batch["token_embeddings"].to(device).float()
             labels = batch["token_labels"].to(device)
             mask = batch["token_mask"].to(device)
 
-            preds, moe_aux_loss = mlp(emb, mask=mask) 
+            preds, moe_aux_loss = mlp(emb, mask=mask)
 
             loss_all = criterion(preds, labels)
             bce_loss = (loss_all * mask.float()).sum() / max(mask.float().sum(), 1.0)

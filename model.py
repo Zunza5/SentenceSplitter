@@ -193,7 +193,7 @@ class MoELayer(nn.Module):
         # L_balance = num_experts * sum(f_i * P_i)
         if mask is not None:
             # Only consider valid (non-padding) positions
-            valid_probs = gate_probs[mask]  # (num_valid, num_experts)
+            valid_probs = gate_probs[mask.bool()]  # (num_valid, num_experts)
         else:
             valid_probs = gate_probs.reshape(-1, self.num_experts)
 
