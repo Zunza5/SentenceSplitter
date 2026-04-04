@@ -5,7 +5,8 @@ import torch
 import time
 
 # Import pipeline functions
-from inference_sentence import load_sentence_mlp, split_into_sentences, load_language_model, get_device
+from inference_sentence import load_sentence_mlp, split_into_sentences
+from sentence_embeddings import load_language_model, get_device
 
 class SentenceSplitterGUI:
     def __init__(self, root):
@@ -21,10 +22,11 @@ class SentenceSplitterGUI:
         self.llm_model = None
         self.tokenizer = None
         self.mlp = None
+        self.backend = "transformers"  # or "mlx"
         self.models_loaded = False
         
         # Start initial load in background
-        self.status_var.set("Loading models (MLX)... please wait.")
+        self.status_var.set(f"Loading models ({self.backend})... please wait.")
         self.split_btn.config(state=tk.DISABLED)
         threading.Thread(target=self.load_models_thread, daemon=True).start()
 
@@ -60,9 +62,8 @@ class SentenceSplitterGUI:
     def load_models_thread(self):
         try:
             self.device = get_device()
-            # Hardcoding mlx since it's the fastest on Apple Silicon
-            backend = "mlx"
-            self.llm_model, self.tokenizer = load_language_model(backend=backend, device=self.device)
+            self.llm_model, self.tokenizer = load_language_model(backend=self.backend, device=self.device)
+
             self.mlp = load_sentence_mlp(device=self.device)
             self.mlp.eval()
             self.models_loaded = True
@@ -74,7 +75,7 @@ class SentenceSplitterGUI:
             self.root.after(0, lambda: self.status_var.set("Model load failed."))
 
     def on_models_loaded(self):
-        self.status_var.set("Models loaded. Ready.")
+        self.status_var.set(f"Models loaded ({self.backend} | {self.device}). Ready.")
         self.split_btn.config(state=tk.NORMAL)
 
     def on_split_click(self):
@@ -103,7 +104,7 @@ class SentenceSplitterGUI:
                     llm_model=self.llm_model,
                     tokenizer=self.tokenizer,
                     device=self.device,
-                    backend="mlx",
+                    backend=self.backend,
                     threshold=0.5
                 )
                 

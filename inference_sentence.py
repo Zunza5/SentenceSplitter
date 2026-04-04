@@ -11,6 +11,28 @@ from sentence_embeddings import extract_token_embeddings, load_language_model, g
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 BEST_SENTENCE_CKPT = CHECKPOINT_DIR / "best_sentence_mlp.pt"
+STRONG_BOUNDARY_PUNCT = ".!?;"
+
+
+def _resolve_boundary_char_idx(text: str, start: int, end: int) -> int | None:
+    """Map token span to the boundary character index used by training labels."""
+    text_len = len(text)
+    span_end = min(end, text_len)
+
+    # Preferred: boundary label is on separating whitespace inside token span.
+    if 0 <= start < span_end:
+        for idx in range(start, span_end):
+            if text[idx].isspace():
+                return idx
+
+    prev_idx = end - 1
+    if 0 <= prev_idx < text_len and text[prev_idx] in STRONG_BOUNDARY_PUNCT:
+        return prev_idx
+    if 0 <= end < text_len:
+        return end
+    if 0 <= prev_idx < text_len:
+        return prev_idx
+    return None
 
 
 def load_sentence_mlp(checkpoint_path: Path | None = None, device: torch.device | None = None):
@@ -52,7 +74,7 @@ def _token_boundary_probs(
     device: torch.device,
     backend: str,
 ) -> list[tuple[int, float]]:
-    """Return pairs of (chunk_char_end, boundary_prob) at token boundaries."""
+    """Return pairs of (chunk_char_idx, boundary_prob) at mapped boundary points."""
     encoding = tokenizer(
         chunk_text,
         return_tensors="pt",
@@ -77,7 +99,10 @@ def _token_boundary_probs(
             continue
         if tok_idx >= len(probs):
             break
-        boundaries.append((end, float(probs[tok_idx])))
+        boundary_idx = _resolve_boundary_char_idx(chunk_text, start, end)
+        if boundary_idx is None:
+            continue
+        boundaries.append((boundary_idx, float(probs[tok_idx])))
     return boundaries
 
 
@@ -113,10 +138,10 @@ def split_into_sentences(
             backend=backend,
         )
 
-        for local_end, prob in chunk_bounds:
-            global_end = start + local_end
-            if 0 < global_end <= len(text):
-                boundary_scores.setdefault(global_end, []).append(prob)
+        for local_idx, prob in chunk_bounds:
+            global_idx = start + local_idx
+            if 0 < global_idx <= len(text):
+                boundary_scores.setdefault(global_idx, []).append(prob)
 
         if end == len(text):
             break
@@ -125,8 +150,8 @@ def split_into_sentences(
 
     split_points = []
     for point, vals in boundary_scores.items():
-        avg_prob = sum(vals) / max(1, len(vals))
-        if avg_prob > threshold and point < len(text):
+        max_prob = max(vals) if vals else 0.0
+        if max_prob > threshold and point < len(text):
             split_points.append(point)
     split_points = sorted(set(split_points))
 

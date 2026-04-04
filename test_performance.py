@@ -9,9 +9,20 @@ from sentence_embeddings import load_language_model, extract_token_embeddings, g
 from model import SpacePredictorMLP
 from data_sentence import get_sentence_dataloader
 
-def test_performance(split="test", backend="transformers", batch_size=8, device=None):
+def test_performance(
+    split="test",
+    backend="transformers",
+    batch_size=8,
+    max_chars=2048,
+    stride_chars=2048,
+    device=None,
+):
     if device is None:
         device = get_device()
+
+    if max_chars >= 4096 and batch_size > 2:
+        print(f"Warning: max_chars={max_chars} with batch_size={batch_size} can trigger OOM; forcing batch_size=2.")
+        batch_size = 2
     
     # 1. Load Models
     print(f"--- Loading Models (Backend: {backend}) ---")
@@ -47,8 +58,8 @@ def test_performance(split="test", backend="transformers", batch_size=8, device=
         batch_size=batch_size,
         tokenizer=tokenizer,
         shuffle=False,
-        max_chars=10000,
-        stride_chars=10000,
+        max_chars=max_chars,
+        stride_chars=stride_chars,
         augmentation_mode="original"
     )
     
@@ -132,8 +143,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test performance of Sentence Splitter")
     parser.add_argument("--split", type=str, default="test", help="Dataset split to test (test, test2, engTest, etc.)")
     parser.add_argument("--backend", type=str, default="transformers", choices=["transformers", "mlx"], help="Model backend")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for inference")
+    parser.add_argument("--batch-size", type=int, default=8, help="Batch size for inference")
+    parser.add_argument("--max-chars", type=int, default=2048, help="Max characters per chunk")
+    parser.add_argument("--stride-chars", type=int, default=2048, help="Chunk stride in characters")
     
     args = parser.parse_args()
     
-    test_performance(split=args.split, backend=args.backend, batch_size=args.batch_size)
+    test_performance(
+        split=args.split,
+        backend=args.backend,
+        batch_size=args.batch_size,
+        max_chars=args.max_chars,
+        stride_chars=args.stride_chars,
+    )

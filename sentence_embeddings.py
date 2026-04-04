@@ -106,18 +106,22 @@ def load_language_model(backend: str = "transformers", device: torch.device | No
     # then move to MPS for inference
     load_device = "cpu" if device.type == "mps" else "auto"
     
-    # Prefer encoder-style models for embedding extraction, and only fall back
-    # to CausalLM when the config is not supported by AutoModel.
-    if config_type in AutoModel._model_mapping:
-        model = AutoModel.from_pretrained(
-            MODEL_NAME, device_map=load_device, dtype=torch.bfloat16
-        )
-        print(f"Loaded encoder model '{MODEL_NAME}' for embedding extraction")
-    elif config_type in AutoModelForCausalLM._model_mapping:
+    # Prefer CausalLM for decoder-only checkpoints (e.g. Qwen3.5) because
+    # AutoModel can resolve to a wrapper class with incompatible state_dict keys.
+    if config_type in AutoModelForCausalLM._model_mapping:
         model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME, device_map=load_device, dtype=torch.bfloat16
+            MODEL_NAME, 
+            dtype=torch.bfloat16,
+            low_cpu_mem_usage=True
         )
         print(f"Loaded causal LM model '{MODEL_NAME}' for embedding extraction")
+    elif config_type in AutoModel._model_mapping:
+        model = AutoModel.from_pretrained(
+            MODEL_NAME, 
+            dtype=torch.bfloat16,
+            low_cpu_mem_usage=True
+        )
+        print(f"Loaded encoder model '{MODEL_NAME}' for embedding extraction")
     else:
         raise ValueError(
             f"Unsupported model config for embedding extraction: {config_type.__name__}"

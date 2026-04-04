@@ -319,6 +319,39 @@ def augment_twitter_style(chunk: list[list[str]]) -> list[list[str]]:
     return new_chunk
 
 
+def augment_boundary_diversity(chunk: list[list[str]], prob: float = 0.3) -> list[list[str]]:
+    """
+    Diversify sentence boundary patterns to improve robustness on datasets
+    like VIT that use semicolons, colons, or lowercase sentence starts.
+
+    Per-boundary modifications (each applied independently with probability `prob`):
+    - Replace final '.' with ';' or ':'
+    - Lowercase the first word of the following sentence
+    """
+    new_chunk = [list(words) for words in chunk]  # shallow copy per sentence
+
+    for i in range(len(new_chunk) - 1):
+        if random.random() > prob:
+            continue
+
+        # --- Vary ending punctuation ---
+        if new_chunk[i] and new_chunk[i][-1].endswith('.'):
+            last_word = new_chunk[i][-1]
+            replacement = random.choice([';', ':'])
+            new_chunk[i][-1] = last_word[:-1] + replacement
+
+        # --- Lowercase next sentence's first word ---
+        if random.random() < 0.5 and new_chunk[i + 1]:
+            new_chunk[i + 1][0] = new_chunk[i + 1][0].lower()
+
+    # Also sometimes just lowercase a sentence start (without changing punct)
+    for i in range(1, len(new_chunk)):
+        if random.random() < prob * 0.25 and new_chunk[i]:
+            new_chunk[i][0] = new_chunk[i][0].lower()
+
+    return new_chunk
+
+
 def make_sentence_bounds_labels(chunk: list[list[str]]) -> tuple[str, list[int]]:
     """
     Given a list of sentences (where each sentence is a list of words), create:
@@ -413,10 +446,9 @@ def build_sentence_token_labels(
             token_labels.append(-1)
             continue
 
-        # Robust boundary assignment for tokenizers that may merge leading spaces
-        # with the following token: mark token positive if any boundary exists in
-        # its covered span or immediately after its end.
-        safe_end = min(end + 1, text_len)
+        # Assign positives only if a boundary label is inside the token span.
+        # Using end+1 marks two adjacent tokens as positive around sentence breaks.
+        safe_end = min(end, text_len)
         span_labels = labels[start:safe_end]
         lbl = 1 if 1 in span_labels else 0
         token_labels.append(lbl if lbl in (0, 1) else -1)
@@ -436,7 +468,8 @@ class SentenceSplitDataset(Dataset):
         max_chars: int = 2048,
         stride_chars: int = 1024,
         augment_prob: float = 0.0,
-        augmentation_mode: str = "original", # "original", "augmented", "both"
+        augmentation_mode: str = "original", # "original", "augmented", "both", "boundary"
+        boundary_augment_prob: float = 0.0,
     ):
         # Load and parse using centralized helper (prioritizes local .sent_split)
         self.sentences = get_sentences_for_split(split)
@@ -449,20 +482,27 @@ class SentenceSplitDataset(Dataset):
         self.samples = []
         chunks_with_offsets = chunk_sentences_by_chars(self.sentences, max_chars=max_chars, stride_chars=stride_chars)
         
-        print(f"Dataset '{split}': processing {len(chunks_with_offsets)} chunks (augment_prob={augment_prob})...")
+        print(f"Dataset '{split}': processing {len(chunks_with_offsets)} chunks "
+              f"(augment_prob={augment_prob}, boundary_augment_prob={boundary_augment_prob})...")
         
         for chunk, offset in chunks_with_offsets:
             # 1. Original
             if augmentation_mode in ("original", "both"):
                 self._add_sample(chunk, max_chars, offset)
             
-            # 2. Augmented
+            # 2. Twitter-style augmentation
             if augmentation_mode in ("augmented", "both"):
                 if augment_prob > 0 and random.random() < augment_prob:
                     aug_chunk = augment_twitter_style(chunk)
                     if aug_chunk:
-                        # Augmented samples use the same offset as the original
                         self._add_sample(aug_chunk, max_chars, offset)
+
+            # 3. Boundary diversity augmentation
+            if augmentation_mode in ("boundary", "both"):
+                if boundary_augment_prob > 0 and random.random() < boundary_augment_prob:
+                    bdry_chunk = augment_boundary_diversity(chunk)
+                    if bdry_chunk:
+                        self._add_sample(bdry_chunk, max_chars, offset)
 
     def _add_sample(self, chunk: list[list[str]], max_chars: int, char_offset: int = 0):
         text, labels = make_sentence_bounds_labels(chunk)
@@ -539,6 +579,7 @@ def get_sentence_dataloader(
     shuffle: Optional[bool] = None,
     augment_prob: float = 0.0,
     augmentation_mode: str = "original",
+    boundary_augment_prob: float = 0.0,
 ) -> DataLoader:
     dataset = SentenceSplitDataset(
         split=split, 
@@ -546,7 +587,8 @@ def get_sentence_dataloader(
         max_chars=max_chars, 
         stride_chars=stride_chars,
         augment_prob=augment_prob,
-        augmentation_mode=augmentation_mode
+        augmentation_mode=augmentation_mode,
+        boundary_augment_prob=boundary_augment_prob,
     )
     if shuffle is None:
         shuffle = split == "train"
