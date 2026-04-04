@@ -73,7 +73,7 @@ def get_spacy_model(language):
         spacy.cli.download(model_name)
         return spacy.load(model_name)
 
-def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx", threshold=0.5):
+def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="transformers", threshold=0.5):
     print(f"\n--- Running LLM Inference on {len(dataloader.dataset)} chunks ---")
     
     # Pre-determine total length to initialize buffers
@@ -81,15 +81,12 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx",
     for sample in dataloader.dataset:
         total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
     
-    # Use NumPy arrays for massive memory efficiency over Python lists
     full_probs_max = np.zeros(total_text_len, dtype=np.float32)
     full_labels = np.zeros(total_text_len, dtype=np.int16)
     label_filled = np.zeros(total_text_len, dtype=bool)
     
     total_time = 0.0
-    time_llm = 0.0
-    time_sync = 0.0
-    time_post = 0.0
+    time_inference = 0.0
     num_processed = 0
     
     with torch.no_grad():
@@ -97,6 +94,9 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx",
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
             token_mask = batch["token_mask"].to(device)
+            # Retrieve the mapping directly from the dataloader
+            char_to_token = batch["char_to_token"].to(device) 
+            
             labels = batch["char_labels"]
             mask = batch["char_mask"]
             offsets = batch["char_offset"]
@@ -104,70 +104,101 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx",
             
             start_batch = time.time()
             
+            # 1. LLM Forward Pass
             tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
             tok_emb = tok_emb.float()
+            
+            # 2. MLP Prediction
             preds, _ = mlp(tok_emb, mask=token_mask)
             
-            end_llm = time.time()
-            time_llm += (end_llm - start_batch)
+            # 3. Vectorized Projection: Map tokens to characters instantly on GPU
+            char_probs = torch.gather(preds, dim=1, index=char_to_token)
             
-            # Explicitly delete to free memory earlier
-            del tok_emb
+            # Hardware synchronization to ensure accurate timing of GPU operations
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+            elif hasattr(torch, "mps") and hasattr(torch.mps, "synchronize"):
+                torch.mps.synchronize()
+                
+            end_inference = time.time()
             
-            # Move to CPU ONCE to avoid O(BatchSize) sync overheads on MPS
-            preds_cpu = preds.cpu()
-            mask_cpu = mask.cpu()
-            labels_cpu = labels.cpu()
-            token_mask_cpu = token_mask.cpu()
+            # This is the exact total inference time for the batch (LLM + MLP + Projection)
+            time_inference += (end_inference - start_batch)
             
-            end_sync = time.time()
-            time_sync += (end_sync - end_llm)
+            # Free VRAM immediately
+            del tok_emb, preds
             
-            for b in range(preds.shape[0]):
-                offset = int(offsets[b])
-                valid_char_len = int(mask_cpu[b].sum().item())
-                l_list = labels_cpu[b][:valid_char_len].int().tolist()
-
+            # Move results to CPU only after all hardware computations are done
+            char_probs_cpu = char_probs.cpu().numpy()
+            mask_cpu = mask.numpy()
+            labels_cpu = labels.numpy()
+            offsets_cpu = offsets.numpy()
+            
+            for b in range(char_probs_cpu.shape[0]):
+                offset = int(offsets_cpu[b])
+                valid_char_len = int(mask_cpu[b].sum())
+                
+                # REFINEMENT: Map each token's probability to exactly ONE canonical character position
+                # to match label semantics. We prioritize space, then punctuation, then token-end.
+                c2t = batch["char_to_token"][b].cpu().numpy()[:valid_char_len]
                 local_text = texts[b]
-                valid_tok = token_mask_cpu[b].bool()
-                p_tok = preds_cpu[b][valid_tok].tolist()
-                tok_offsets = _valid_token_offsets(tokenizer, local_text)
-                valid_tok_len = min(len(p_tok), len(tok_offsets))
+                p_char_sparse = np.zeros(valid_char_len, dtype=np.float32)
 
-                # Project token probabilities to characters
-                p_char = [0.0] * valid_char_len
-                for j in range(valid_tok_len):
-                    local_start, local_end = tok_offsets[j]
-                    target_idx = _resolve_char_target_idx(local_text, local_start, local_end, valid_char_len)
-                    if target_idx is not None:
-                        p_char[target_idx] = max(p_char[target_idx], float(p_tok[j]))
+                if len(c2t) > 0:
+                    # Identify token boundaries efficiently
+                    token_ends = np.where(c2t[:-1] != c2t[1:])[0]
+                    token_ends = np.append(token_ends, len(c2t) - 1)
+                    
+                    # For each token, find the "best" character index in its span
+                    last_start = 0
+                    for end_idx in token_ends:
+                        token_id = c2t[end_idx]
+                        if token_id < 0:
+                            last_start = end_idx + 1
+                            continue
+                            
+                        # Default is token end
+                        best_idx = end_idx
+                        # Search for space or punctuation in span [last_start, end_idx]
+                        found_pref = False
+                        for idx in range(last_start, end_idx + 1):
+                            if idx < len(local_text):
+                                char = local_text[idx]
+                                if char.isspace():
+                                    best_idx = idx
+                                    found_pref = True
+                                    break
+                                elif not found_pref and char in PUNCT_CHARS:
+                                    best_idx = idx
+                                    # keep searching for a space
+                        
+                        p_char_sparse[best_idx] = char_probs_cpu[b, end_idx]
+                        last_start = end_idx + 1
 
-                # Vectorize the NumPy array updates to fix the O(N) scalar slowdown
                 end_idx = min(offset + valid_char_len, total_text_len)
                 actual_len = end_idx - offset
                 
                 if actual_len > 0:
-                    p_char_arr = np.array(p_char[:actual_len], dtype=np.float32)
+                    # Fast NumPy array updates
                     full_probs_max[offset:end_idx] = np.maximum(
-                        full_probs_max[offset:end_idx], p_char_arr
+                        full_probs_max[offset:end_idx], 
+                        p_char_sparse[:actual_len]
                     )
                     
                     slice_filled = label_filled[offset:end_idx]
                     unfilled_mask = ~slice_filled
                     
                     if np.any(unfilled_mask):
-                        l_arr = np.array(l_list[:actual_len], dtype=np.int16)
+                        l_arr = labels_cpu[b][:actual_len].astype(np.int16)
                         full_labels[offset:end_idx][unfilled_mask] = l_arr[unfilled_mask]
                         label_filled[offset:end_idx] = True
                 
                 num_processed += 1
             
-            end_post = time.time()
-            time_post += (end_post - end_sync)
-            total_time += (end_post - start_batch)
+            total_time += (time.time() - start_batch)
                 
             if (i + 1) % 10 == 0:
-                print(f" LLM: Batch {i+1}/{len(dataloader)} processed | LLM: {time_llm:.2f}s | Sync: {time_sync:.2f}s | Post: {time_post:.2f}s")
+                print(f" LLM: Batch {i+1}/{len(dataloader)} | Pure Inference Time: {time_inference:.2f}s | Total Batch Time: {total_time:.2f}s")
 
     # Max pooling across overlapping windows preserves sparse boundary peaks.
     final_preds = []
@@ -188,9 +219,12 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="mlx",
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "full_probs": full_probs_max,
+        "full_labels": full_labels,
         "total_time": total_time,
         "num_processed": num_processed
     }
+
 
 def evaluate_spacy(dataloader, nlp_model):
     print(f"\n--- Running SpaCy Inference on {len(dataloader.dataset)} chunks ---")
