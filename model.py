@@ -4,8 +4,7 @@ import torch.nn.functional as F
 
 class FocalLoss(nn.Module):
     """
-    Focal Loss for binary classification.
-    FL(p_t) = -alpha * (1 - p_t)^gamma * log(p_t)
+    Stable Focal Loss for binary classification operating directly on logits.
     """
     def __init__(self, alpha: float = 1.0, gamma: float = 2.0, reduction: str = "mean"):
         super().__init__()
@@ -13,23 +12,20 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
         self.reduction = reduction
 
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            inputs: Probabilities (after sigmoid)
+            logits: Raw outputs from the model (before sigmoid)
             targets: Binary labels (0 or 1)
         """
-        # Avoid log(0)
-        p = torch.clamp(inputs, min=1e-7, max=1-1e-7)
+        # Numerically stable Binary Cross Entropy directly from logits
+        bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction="none")
         
-        # Binary cross entropy
-        bce_loss = - (targets * torch.log(p) + (1 - targets) * torch.log(1 - p))
-        
-        # Focal weight
+        # Calculate probabilities for the focal weight
+        p = torch.sigmoid(logits)
         pt = torch.where(targets == 1, p, 1 - p)
-        focal_weight = (1 - pt) ** self.gamma
         
-        # Alpha balancing
+        focal_weight = (1 - pt) ** self.gamma
         alpha_weight = torch.where(targets == 1, self.alpha, 1.0)
         
         loss = alpha_weight * focal_weight * bce_loss
@@ -99,25 +95,21 @@ class MultiScaleConv1d(nn.Module):
 
 class ExpertBlock(nn.Module):
     """
-    Single Transformer expert with residual connection and layer norm.
-    Uses nn.TransformerEncoderLayer for a standard self-attention + FFN block.
+    Standard Feed-Forward Network used as an expert in MoE.
+    Replaces the heavy self-attention layer for true sparse execution.
     """
-    def __init__(self, d_model: int, nhead: int = 4, dropout: float = 0.1):
+    def __init__(self, d_model: int, dropout: float = 0.1):
         super().__init__()
-        self.transformer_layer = nn.TransformerEncoderLayer(
-            d_model=d_model,
-            nhead=nhead,
-            dim_feedforward=d_model * 4,
-            dropout=dropout,
-            batch_first=True,
-            activation="gelu",
+        # Expand dimension usually by 4x in standard transformers
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_model * 4),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model * 4, d_model)
         )
-        self.norm = nn.LayerNorm(d_model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (batch, seq_len, d_model)
-        out = self.transformer_layer(x)
-        return self.norm(out + x)  # residual + norm
+        return self.ffn(x)
 
 
 class MoELayer(nn.Module):
@@ -151,7 +143,7 @@ class MoELayer(nn.Module):
 
         self.router = nn.Linear(d_model, self.num_experts)
         self.experts = nn.ModuleList([
-            ExpertBlock(d_model, nhead=nhead, dropout=dropout)
+            ExpertBlock(d_model, dropout=dropout)
             for _ in range(self.num_experts)
         ])
 
@@ -181,11 +173,38 @@ class MoELayer(nn.Module):
             active_selector = hard_weights
         active_experts = (active_selector.sum(dim=(0, 1)) > 0).nonzero(as_tuple=False).flatten().tolist()
 
+        # Sparse execution: process only the tokens assigned to each expert
         output = torch.zeros_like(x)
+        
+        # Flatten tensors to simplify token extraction
+        flat_x = x.view(-1, x.size(-1))
+        flat_weights = hard_weights.view(-1, self.num_experts)
+        
+        if mask is not None:
+            flat_mask = mask.view(-1).bool()
+        else:
+            flat_mask = torch.ones(flat_x.size(0), dtype=torch.bool, device=x.device)
+
         for expert_idx in active_experts:
-            expert_out = self.experts[expert_idx](x)  # (B, S, d_model)
-            weight = hard_weights[:, :, expert_idx].unsqueeze(-1)  # (B, S, 1)
-            output = output + (expert_out * weight)
+            # Find tokens assigned to this expert that are also valid (unmasked)
+            expert_mask = (flat_weights[:, expert_idx] > 0) & flat_mask
+            
+            if not expert_mask.any():
+                continue
+                
+            # Gather only the relevant tokens
+            assigned_tokens = flat_x[expert_mask]
+            
+            # Process through the FFN expert
+            expert_out = self.experts[expert_idx](assigned_tokens)
+            
+            # Apply router weight
+            weight = flat_weights[expert_mask, expert_idx].unsqueeze(-1)
+            weighted_out = expert_out * weight
+            
+            # Scatter results back to the flattened output tensor
+            flat_output = output.view(-1, x.size(-1))
+            flat_output[expert_mask] += weighted_out
 
         # ── Load-balancing auxiliary loss (Switch Transformer style) ──────
         # f_i = fraction of tokens dispatched to expert i (based on argmax)
@@ -307,4 +326,4 @@ class SpacePredictorMLP(nn.Module):
         # Final classification
         logits = self.classifier(x).squeeze(-1)
         
-        return torch.sigmoid(logits), aux_loss
+        return logits, aux_loss

@@ -112,14 +112,16 @@ def load_language_model(backend: str = "transformers", device: torch.device | No
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_NAME, 
             dtype=torch.bfloat16,
-            low_cpu_mem_usage=True
+            low_cpu_mem_usage=True,
+            attn_implementation="sdpa"
         )
         print(f"Loaded causal LM model '{MODEL_NAME}' for embedding extraction")
     elif config_type in AutoModel._model_mapping:
         model = AutoModel.from_pretrained(
             MODEL_NAME, 
             dtype=torch.bfloat16,
-            low_cpu_mem_usage=True
+            low_cpu_mem_usage=True,
+            attn_implementation="sdpa"
         )
         print(f"Loaded encoder model '{MODEL_NAME}' for embedding extraction")
     else:

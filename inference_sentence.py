@@ -88,8 +88,8 @@ def _token_boundary_probs(
 
     tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
     outputs = mlp(tok_emb.float(), mask=attention_mask.bool())
-    probs = outputs[0] if isinstance(outputs, tuple) else outputs
-    probs = probs.squeeze(0).detach().cpu().tolist()
+    logits = outputs[0] if isinstance(outputs, tuple) else outputs
+    probs = torch.sigmoid(logits).squeeze(0).detach().cpu().tolist()
 
     boundaries: list[tuple[int, float]] = []
     for tok_idx, (start, end) in enumerate(offsets):

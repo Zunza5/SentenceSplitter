@@ -38,9 +38,9 @@ def _collect_top_errors(model, dataloader, device, threshold=0.5, top_k=5):
             mask = batch["token_mask"].cpu()
             texts = batch.get("spaceless", [""] * emb.shape[0])
 
-            outputs = model(emb, mask=token_mask)
-            probs = outputs[0] if isinstance(outputs, tuple) else outputs
-            probs = probs.cpu()
+            logits_out = model(emb, mask=token_mask)
+            logits = logits_out[0] if isinstance(logits_out, tuple) else logits_out
+            probs = torch.sigmoid(logits).cpu()
 
             for sample_idx in range(probs.shape[0]):
                 valid = mask[sample_idx]
@@ -213,7 +213,7 @@ def main():
     train_parser = subparsers.add_parser("train")
     train_parser.add_argument("--phase", choices=["extract", "train", "both"], default="both")
     train_parser.add_argument("--epochs", type=int, default=50)
-    train_parser.add_argument("--batch-size", type=int, default=16)
+    train_parser.add_argument("--batch-size", type=int, default=8)
     train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
     train_parser.add_argument("--dropout", type=float, default=0.3)

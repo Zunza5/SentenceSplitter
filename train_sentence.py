@@ -65,6 +65,7 @@ def _build_torch_generator(seed: int) -> torch.Generator:
 
 @functools.lru_cache(maxsize=128)
 def _load_batch_file(file_path: Path):
+    # mmap=True is useful for large consolidated files
     return torch.load(file_path, weights_only=True, mmap=True)
 
 
@@ -72,37 +73,64 @@ class CachedEmbeddingDataset(Dataset):
     """Loads pre-extracted sentence embeddings from disk lazily."""
 
     def __init__(self, cache_path: Path):
-        self.files = sorted(cache_path.glob("batch_*.pt"))
-        if not self.files:
-            raise FileNotFoundError(
-                f"No cached embeddings found in {cache_path}. Run extraction first."
-            )
-
-        self.index_map = []
-        for f in self.files:
-            data = torch.load(f, weights_only=True)
-            batch_size = data["token_embeddings"].shape[0]
-            for i in range(batch_size):
-                self.index_map.append((f, i))
+        self.cache_path = cache_path
+        self.consolidated_file = cache_path / "consolidated.pt"
+        
+        if self.consolidated_file.exists():
+            print(f"  → Found consolidated file at {self.consolidated_file}")
+            # Map tensors directly from disk to avoid RAM exhaustion
+            data = torch.load(self.consolidated_file, weights_only=True, mmap=True)
+            self.embeddings = data["token_embeddings"]
+            self.labels = data["token_labels"]
+            self.mask = data["token_mask"]
+            self.spaceless = data.get("spaceless")
+            self.use_consolidated = True
+            self.num_samples = self.embeddings.shape[0]
             del data
+        else:
+            self.use_consolidated = False
+            self.files = sorted(cache_path.glob("batch_*.pt"))
+            if not self.files:
+                raise FileNotFoundError(
+                    f"No cached embeddings found in {cache_path}. Run extraction or consolidation first."
+                )
+
+            self.index_map = []
+            for f in self.files:
+                data = torch.load(f, weights_only=True)
+                batch_size = data["token_embeddings"].shape[0]
+                for i in range(batch_size):
+                    self.index_map.append((f, i))
+                del data
+            self.num_samples = len(self.index_map)
 
     def __len__(self):
-        return len(self.index_map)
+        return self.num_samples
 
     def __getitem__(self, idx):
-        file_path, inner_idx = self.index_map[idx]
-        data = _load_batch_file(file_path)
-        mask = data["token_mask"][inner_idx]
-        sample = {
-            "token_embeddings": data["token_embeddings"][inner_idx][mask],
-            "token_labels": data["token_labels"][inner_idx][mask],
-        }
-        if "spaceless" in data:
-            if isinstance(data["spaceless"], (list, tuple)):
-                sample["spaceless"] = data["spaceless"][inner_idx]
-            else:
-                sample["spaceless"] = data["spaceless"]
-        return sample
+        if self.use_consolidated:
+            mask = self.mask[idx]
+            sample = {
+                "token_embeddings": self.embeddings[idx][mask],
+                "token_labels": self.labels[idx][mask],
+            }
+            if self.spaceless:
+                sample["spaceless"] = self.spaceless[idx]
+            return sample
+        else:
+            file_path, inner_idx = self.index_map[idx]
+            data = _load_batch_file(file_path)
+            mask = data["token_mask"][inner_idx]
+            sample = {
+                "token_embeddings": data["token_embeddings"][inner_idx][mask],
+                "token_labels": data["token_labels"][inner_idx][mask],
+            }
+            if "spaceless" in data:
+                if isinstance(data["spaceless"], (list, tuple)):
+                    sample["spaceless"] = data["spaceless"][inner_idx]
+                else:
+                    sample["spaceless"] = data["spaceless"]
+            return sample
 
 
 def _build_balanced_sample_weights(datasets: list[Dataset]) -> torch.Tensor:
@@ -158,8 +186,8 @@ def evaluate(
         labels = batch["token_labels"].cpu()
         mask = batch["token_mask"].cpu()
 
-        preds, _ = model(emb, mask=token_mask)
-        preds = preds.cpu()
+        logits, _ = model(emb, mask=token_mask)
+        preds = torch.sigmoid(logits).cpu()
 
         for i in range(preds.shape[0]):
             valid = mask[i]
@@ -291,6 +319,9 @@ def train_sentence_mlp(
     hidden_dim = train_ds[0]["token_embeddings"].shape[-1]
     print(f"Detected model hidden_dim: {hidden_dim}")
 
+    # On macOS, use 0 workers to avoid spawn overhead
+    num_workers = 0 if torch.backends.mps.is_available() else 4
+    
     if balanced_batches:
         sample_weights = _build_balanced_sample_weights(train_datasets)
         sampler_gen = _build_torch_generator(seed)
@@ -305,7 +336,7 @@ def train_sentence_mlp(
             batch_size=batch_size,
             sampler=train_sampler,
             collate_fn=cached_collate_fn,
-            num_workers=4,
+            num_workers=num_workers,
             worker_init_fn=_seed_worker,
         )
     else:
@@ -315,7 +346,7 @@ def train_sentence_mlp(
             batch_size=batch_size,
             shuffle=True,
             collate_fn=cached_collate_fn,
-            num_workers=4,
+            num_workers=num_workers,
             worker_init_fn=_seed_worker,
             generator=train_gen,
         )
@@ -324,7 +355,7 @@ def train_sentence_mlp(
         batch_size=batch_size,
         shuffle=False,
         collate_fn=cached_collate_fn,
-        num_workers=2,
+        num_workers=max(0, num_workers // 2),
         worker_init_fn=_seed_worker,
     )
 
@@ -357,9 +388,9 @@ def train_sentence_mlp(
             labels = batch["token_labels"].to(device)
             mask = batch["token_mask"].to(device)
 
-            preds, moe_aux_loss = mlp(emb, mask=mask)
+            logits, moe_aux_loss = mlp(emb, mask=mask)
 
-            loss_all = criterion(preds, labels)
+            loss_all = criterion(logits, labels)
             bce_loss = (loss_all * mask.float()).sum() / max(mask.float().sum(), 1.0)
             
             # Total loss = BCE + load-balancing auxiliary loss
