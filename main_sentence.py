@@ -217,7 +217,7 @@ def main():
     train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
     train_parser.add_argument("--dropout", type=float, default=0.3)
-    train_parser.add_argument("--pos-weight", type=float, default=1.0, help="Positive class weight for imbalanced data")
+    train_parser.add_argument("--pos-weight", type=float, default=0.5, help="Positive class weight for imbalanced data")
     train_parser.add_argument(
         "--grad-clip-norm",
         type=float,

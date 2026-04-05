@@ -154,8 +154,8 @@ def finetune_mlp(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tune the Sentence MLP on hard datasets")
-    parser.add_argument("--train-splits", type=str, required=True, help="Comma-separated train splits (e.g. it-vit-train,it-partut-train)")
-    parser.add_argument("--dev-splits", type=str, required=True, help="Comma-separated dev splits (e.g. it-vit-dev,it-partut-dev)")
+    parser.add_argument("--train-splits", type=str, default="it-vit-train, it-isdt-train, it-markit-train", help="Comma-separated train splits (e.g. it-vit-train,it-partut-train)")
+    parser.add_argument("--dev-splits", type=str, default="it-vit-dev, it-isdt-dev, it-markit-dev", help="Comma-separated dev splits (e.g. it-vit-dev,it-partut-dev)")
     parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate for fine-tuning")
     parser.add_argument("--epochs", type=int, default=5, help="Max epochs")
     

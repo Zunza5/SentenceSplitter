@@ -195,10 +195,22 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="trans
                 
                 num_processed += 1
             
+            # Delete local variables to free memory immediately
+            del input_ids, attention_mask, token_mask, char_to_token, char_probs
+            del char_probs_cpu, mask_cpu, labels_cpu, offsets_cpu
+            # Note: p_char_sparse is deleted automatically when the inner loop ends, 
+            # but we can't 'del' it here unless we define it outside the loop.
+            
             total_time += (time.time() - start_batch)
                 
             if (i + 1) % 10 == 0:
                 print(f" LLM: Batch {i+1}/{len(dataloader)} | Pure Inference Time: {time_inference:.2f}s | Total Batch Time: {total_time:.2f}s")
+                
+                # Periodically clear hardware cache to avoid Out of Memory (OOM)
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                elif hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+                    torch.mps.empty_cache()
 
     # Max pooling across overlapping windows preserves sparse boundary peaks.
     final_preds = []
@@ -219,8 +231,6 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="trans
         "precision": precision,
         "recall": recall,
         "f1": f1,
-        "full_probs": full_probs_max,
-        "full_labels": full_labels,
         "total_time": total_time,
         "num_processed": num_processed
     }
@@ -547,7 +557,7 @@ def plot_time_comparison(results):
 def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
     parser.add_argument("--test-splits", type=str, default=ALL_TEST_SPLITS, help="Comma-separated test splits")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for LLM inference")
+    parser.add_argument("--batch-size", type=int, default=8, help="Batch size for LLM inference")
     parser.add_argument("--max-chars", type=int, default=1024, help="Max characters per chunk for LLM inference")
     parser.add_argument("--stride-chars", type=int, default=512, help="Set to < max-chars to enable overlapping window averaging")
     parser.add_argument("--threshold", type=float, default=0.5, help="Decision threshold for LLM token boundaries")
@@ -629,6 +639,11 @@ def main():
                 backend=backend,
                 threshold=args.threshold,
             )
+            
+            # Remove heavy arrays from the dictionary before appending
+            # to avoid accumulating gigabytes of RAM across datasets
+            llm_results.pop("full_probs", None)
+            llm_results.pop("full_labels", None)
             
             print_comparison(spacy_results, nltk_results, llm_results, llm_label=f"LLM ({backend})")
             all_results.append((split, spacy_results, nltk_results, llm_results))
