@@ -1,152 +1,119 @@
-# Sentence Splitter
+# Sentence Splitter (Token-Level MoE Architecture)
 
-This repository provides a lightweight, token-level sentence boundary prediction model. It uses Large Language Model (LLM) embeddings combined with a Multi-Scale Convolutional Neural Network (CNN) to accurately identify sentence splits.
-
-## Methodology
-
-The sentence splitting method operates at the token level to predict sentence boundaries aligned with tokenizer output. The architecture consists of the following pipeline:
-
-1. **Embedding Extraction**: The input text is processed by a base LLM (such as Qwen) to extract token embeddings.
-2. **SpacePredictorMLP**: The core model is a lightweight Multi-Layer Perceptron (MLP) combined with a `MultiScaleConv1d` block. Self-attention was deliberately removed to prevent overfitting on small datasets.
-   - **Multi-Scale CNN**: Captures context at three different scales using parallel branches:
-     - *Local context* (kernel size 3) for standard periods and spaces.
-     - *Medium context* (kernel size 5) for abbreviations.
-     - *Wide context* (kernel size 7, dilation 2) for quotes and brackets.
-3. **Classification & Focal Loss**: The model predicts a boundary probability for each token using a Sigmoid activation. During training, it utilizes `FocalLoss` to handle the severe class imbalance, since sentence boundaries are much rarer than standard tokens.
-
-## Training
-
-Training is divided into a two-phase pipeline to optimize resource usage and speed:
-
-1. **Phase 1: Offline Embedding Extraction**
-   To avoid recomputing heavy LLM embeddings during each epoch, the embeddings for sentence chunks are extracted offline and cached to the disk. You can optionally apply data augmentation during this phase.
-   
-2. **Phase 2: MLP Training**
-   Once embeddings are cached, the lightweight `SpacePredictorMLP` is trained on these token-level representations. The training pipeline uses an Adam optimizer, ReduceLROnPlateau scheduling, and early stopping based on the F1 score evaluated on a validation (dev) split.
-
-## Evaluation and Inference (Splits)
-
-You can run inference to split continuous text into sentences or evaluate the model against a specific dataset split (e.g., `test`, `dev`, `train`).
-
-- **Inference**: The `split_into_sentences` function maps the continuous text to embeddings, passes them through the MLP, and slices the text wherever the model predicts a boundary probability higher than a defined threshold (default `0.5`). The current implementation scores token boundaries directly, matching training and evaluation.
-- **Performance Evaluation**: You can test the accuracy on a specific dataset split using the `test_performance.py` script. It computes Accuracy, Precision, Recall, and F1 Score, along with the average inference time per chunk.
-  
-  ```bash
-  python test_performance.py --split test --backend transformers --batch-size 32
-This guide provides detailed instructions on how to use the Sentence Splitter CLI via `main_sentence.py`.
+This repository implements a high-performance, token-level sentence boundary detection system. It leverages Large Language Model (LLM) embeddings combined with a Mixture of Experts (MoE) classifier and a Multi-Scale Convolutional Neural Network (CNN) to achieve state-of-the-art accuracy across diverse linguistic domains, from formal UD treebanks to noisy social media text (Twitter/Reddit).
 
 ---
 
-### Benchmark results (using Qwen3.5-2B-MLX-8bit)
+## Neural Architecture
 
-<img src="f1_comparison.png" alt="F1 Score Comparison" width="600">
+The system transitions from heavy LLM representations to lightweight, specialized boundary detectors.
 
-## Summary of Findings
+### 1. Feature Extraction (LLM Backend)
+- **Engine**: Supports `transformers` (PyTorch) or `mlx` (Apple Silicon optimized).
+- **Backbone**: Default is `Qwen3.5-0.8B` or `Qwen2.5-0.5B`.
+- **Strategy**: Extracts hidden states from the last layer. These embeddings encapsulate deep semantic and syntactic context, making the model robust to informal grammar and unconventional punctuation.
 
-* **Formal Text:** Both SpaCy and LLM show excellent performance (~0.99 F1).
-* **Social Media/Noisy Text:** The LLM significantly outperforms SpaCy (up to +50% F1 improvement on PoSTWITA/TWITTIRO).
-* **Generalization:** The LLM proves to be more "out-of-the-box" ready for diverse linguistic domains compared to traditional pipeline-based models.
-
----
-
-## Command-Line Interface Guide
-
-The `main_sentence.py` script serves as the central entry point for all operations, including training, evaluation, and live inference.
-
-### 1. Training (`train`)
-The training command handles both the extraction of LLM embeddings and the optimization of the MLP classifier.
-
-**Basic Syntax:**
-```bash
-python main_sentence.py train [OPTIONS]
-```
-
-**Key Arguments:**
-* **`--phase`**: Selects the workflow stage. Options are `extract` (only save embeddings), `train` (only train the MLP on cached data), or `both` (default).
-* **`--backend`**: Chooses the LLM engine: `transformers` or `mlx`.
-* **`--augment-prob`**: Sets the probability (0.0 to 1.0) of generating informal "Twitter-style" data during extraction.
-* **`--epochs`**: Maximum training epochs (default: `50`).
-* **`--lr`**: Learning rate for the Adam optimizer (default: `1e-4`).
-* **`--pos-weight`**: Weight for the positive class in Focal Loss to address imbalance (default: `0.8`).
-* **`--grad-clip-norm`**: Max norm used for gradient clipping (default: `1.0`). Set to `0` or a negative value to disable clipping.
-* **`--train-splits` / `--dev-splits`**: Comma-separated lists of UD splits to use (e.g., `"train,train2,engTrain"`).
-
-**Example - Full Training with Augmentation:**
-```bash
-python main_sentence.py --backend mlx train --phase both --augment-prob 0.4 --epochs 30
-```
+### 2. SpacePredictorMLP (MoE + CNN)
+The classifier is designed to be efficient yet expressive:
+- **Expert Routing**: Uses a Mixture of Experts (MoE) architecture where multiple `ExpertBlock` networks (MLPs) specialize in different linguistic patterns.
+- **Dense Sequence Routing**: Optimized for Apple Silicon (MPS), the router processes the entire sequence in a single dense pass, avoiding memory-expensive dynamic masking.
+- **Multi-Scale CNN**: Before the routing, a `MultiScaleConv1d` block captures context at three scales:
+    - **Local (3x3)**: Standard sentence endings (periods, exclamation marks).
+    - **Medium (5x5)**: Abbreviations and honorifics (e.g., Mr., St.).
+    - **Wide (7x7, Dilation 2)**: Large-scale separators like quotes, brackets, and newlines.
 
 ---
 
-### 2. Evaluation (`eval`)
-Once a model is trained, use the `eval` command to measure its performance on specific test datasets.
+## File-by-File Technical Reference
 
-**Basic Syntax:**
+### Core Execution & API
+- **`main_sentence.py`**: The central entry point. Orchestrates the three main workflows: `train`, `eval`, and `split` (inference). It uses a subparser-based CLI for task-specific configuration.
+- **`inference_sentence.py`**: A clean API for programmatically using the model. Contains `split_into_sentences()` which handles LLM-to-MLP mapping and character-level text slicing.
+- **`gui_sentence.py`**: A Tkinter-based graphical interface for interactive real-time testing of the model splitting performance.
+
+### Training & Fine-Tuning
+- **`train_sentence.py`**: Implements the main training pipeline. 
+    - **Phase 1 (Extraction)**: Runs the LLM to save embeddings to disk.
+    - **Phase 2 (Training)**: Loads cached embeddings via `CachedEmbeddingDataset` to train the MLP instantly (skipping the LLM forward pass).
+    - **Memory Mapping**: Uses `mmap=True` to load consolidated datasets without exhausting RAM.
+- **`finetune_sentence.py`**: A specialized script for cross-domain adaptation. 
+    - **Macro-F1 Strategy**: Evaluates the model separately on multiple hard dev sets (e.g., medical, tweets, legal) and averages the F1 scores to prevent overfitting to the largest dataset.
+    - **Balanced Batches**: Implements weighted sampling to ensure rare datasets are seen as often as large ones during training.
+
+### Model Definitions
+- **`model.py`**: Definitions for `SpacePredictorMLP`, `MoELayer`, `ExpertBlock`, and `MultiScaleConv1d`. Also contains the **Focal Loss** implementation, which addresses the extreme class imbalance (boundaries vs. non-boundaries).
+- **`sentence_embeddings.py`**: Abstraction layer for LLM backends. Handles model loading, quantization (bfloat16/4-bit), and the `extract_token_embeddings` logic.
+
+### Data & Evaluation
+- **`data_sentence.py`**: The data pipeline.
+    - **Universal Dependencies (UD)**: Loaders for CoNLLU and SentSplit formats.
+    - **Augmentations**: Includes Twitter-style abbreviations or mentions and Boundary Diversity (varying punctuation) to improve model robustness.
+    - **Labeling**: Logic for aligning character-level boundaries to tokenizer tokens.
+- **`compare_spacy.py`**: A comprehensive benchmarking suite.
+    - **Baseline Comparison**: Compares the model against **SpaCy** (`it_core_news_lg`) and **NLTK** (Punkt).
+    - **Cached Benchmarking**: Supports a `--use-cache` mode to evaluate the MLP performance across thousands of sentences in seconds.
+- **`consolidate_data.py`**: Maintenance utility. Merges individual batch-level cache files into a single `consolidated.pt` to optimize I/O and training speed.
+
+---
+
+## Installation & Setup
+
+1. **Requirements**: Python 3.10+, PyTorch, Transformers.
+2. **Setup**:
+   ```bash
+   pdm install  # Recommended (using pyproject.toml)
+   # Or using pip:
+   pip install torch transformers datasets scikit-learn
+   ```
+3. **Data**: Place your UD treebanks in `sent_split_data/` or provide URLs in `data_sentence.py`.
+
+---
+
+## Training Workflow
+
+### Step 1: Offline Embedding Extraction
+Extract and cache embeddings to avoid expensive LLM forward passes during training:
 ```bash
-python main_sentence.py eval [OPTIONS]
+python main_sentence.py train --phase extract --backend transformers --max-chars 1024
 ```
 
-**Key Arguments:**
-* **`--test-splits`**: Comma-separated list of cached splits to evaluate (default: `"test,test2,test3,test4,test5,engTest"`).
-* **`--batch-size`**: Number of samples processed per batch (default: `16`).
-
-**Example:**
+### Step 2: Training the MLP
+Train the lightweight classifier on the cached embeddings:
 ```bash
-python main_sentence.py eval --test-splits "test,engTest" --batch-size 32
+python main_sentence.py train --phase train --epochs 50 --lr 1e-4 --pos-weight 0.5
+```
+
+### Step 3: Domain Fine-Tuning (Optional)
+Improve performance on difficult datasets using Macro-F1 balancing:
+```bash
+python finetune_sentence.py --train-splits it-postwita-train,it-twittiro-train --epochs 10
 ```
 
 ---
 
-### 3. Sentence Splitting (`split`)
-This command allows you to perform live inference on a custom string of text.
+## Benchmarking
 
-**Basic Syntax:**
+Compare performance against standard libraries:
 ```bash
-python main_sentence.py split "YOUR_TEXT_HERE" [OPTIONS]
+python compare_spacy.py --test-splits ALL_TEST_SPLITS --use-cache
 ```
 
-**Key Arguments:**
-* **`text`**: The continuous string you want to split into sentences.
-* **`--threshold`**: The probability confidence required to trigger a split (default: `0.5`). Lowering this makes the model more "aggressive" at splitting.
-
-**Example:**
-```bash
-python main_sentence.py split "This is the first sentence. And this is the second? Yes!" --threshold 0.6
-```
+### Benchmark results (MPS - Apple Silicon)
+| Model          | Accuracy | Precision | Recall | F1 Score |
+|----------------|----------|-----------|--------|----------|
+| SpaCy (LG)     | 0.9997   | 0.9721    | 0.9947 | 0.9833   |
+| NLTK (Punkt)   | 0.9988   | 0.9585    | 0.9055 | 0.9313   |
+| **Minerva (MoE)** | **0.9999** | **0.9946** | **0.9911** | **0.9929** |
 
 ---
-## 2. Benchmark Scripts
 
-These specialized scripts provide deeper insights into the model's accuracy and computational efficiency.
+## Advanced CLI Configuration
 
-### Performance Tester (`test_performance.py`)
-Evaluates the model and provides detailed timing for each phase (LLM extraction, expansion, and MLP prediction).
+### `main_sentence.py train` Options:
+- `--aux-weight`: (Default: `1e-5`) Controls the MoE balancing loss. Increase if one expert is dominating.
+- `--pos-weight`: (Default: `0.5`) Compensation for class imbalance. Increase if the model has low recall (misses boundaries).
+- `--balanced-batches`: Automatically balances training samples across multiple input datasets.
 
-**Syntax:**
-```bash
-python test_performance.py --split [SPLIT] --backend [BACKEND] --batch-size [SIZE]
-```
-
-**Arguments:**
-* **`--split`**: The dataset split to test (e.g., `test`, `engTest`). Default is `test`.
-* **`--backend`**: Use `transformers` or `mlx` engine. Default is `transformers`.
-* **`--batch-size`**: Number of chunks to process per batch. Default is `32`.
-
-### SpaCy Comparison (`compare_spacy.py`)
-Benchmarks the Minerva MLP model against the standard SpaCy Italian model (`it_core_news_lg`).
-
-**Syntax:**
-```bash
-python compare_spacy.py --split [SPLIT] --batch-size [SIZE]
-```
-
-**Arguments:**
-* **`--split`**: The dataset split for comparison
-* **`--batch-size`**: Batch size specifically for the Minerva inference part. Default is `32`.
-
-### Metrics Reported
-Both benchmark scripts output the following metrics:
-* **Accuracy, Precision, Recall, and F1 Score**: Standard quality metrics for boundary detection.
-* **Total Inference Time**: The total time taken to process the chosen split.
-* **Avg Time per Chunk**: The average processing speed in milliseconds (ms) per text segment.omparison with SpaCy's `it_core_news_lg` model to benchmark accuracy and speed.
-
+### `compare_spacy.py` Options:
+- `--use-cache`: Extremely fast evaluation using `sentence_embedding_cache`. Required for testing on large splits like `it-vit` or `en-ewt`.
+- `--threshold`: (Default: `0.5`) The probability at which a token is considered a sentence boundary.

@@ -213,10 +213,10 @@ def main():
     train_parser = subparsers.add_parser("train")
     train_parser.add_argument("--phase", choices=["extract", "train", "both"], default="both")
     train_parser.add_argument("--epochs", type=int, default=50)
-    train_parser.add_argument("--batch-size", type=int, default=8)
+    train_parser.add_argument("--batch-size", type=int, default=16)
     train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--d-model", type=int, default=256, help="MoE/CNN internal dimension")
-    train_parser.add_argument("--dropout", type=float, default=0.3)
+    train_parser.add_argument("--dropout", type=float, default=0.2)
     train_parser.add_argument("--pos-weight", type=float, default=0.5, help="Positive class weight for imbalanced data")
     train_parser.add_argument(
         "--grad-clip-norm",
@@ -233,11 +233,11 @@ def main():
     train_parser.add_argument(
         "--balanced-batches",
         action=argparse.BooleanOptionalAction,
-        default=False,
+        default=True,
         help="Balance source datasets via DataLoader sampling (default: enabled)",
     )
-    train_parser.add_argument("--train-splits", type=str, default='it-isdt-train,it-vit-train,it-partut-train,it-markit-train, it-old-train,it-parlamint-train, it-e3c-train, en-ewt-train,en-gum-train,en-partut-train, en-genia-train, en-lines-train')
-    train_parser.add_argument("--dev-splits", type=str, default='it-isdt-dev,it-vit-dev,it-partut-dev,it-markit-dev,en-ewt-dev,en-gum-dev,en-partut-dev')
+    train_parser.add_argument("--train-splits", type=str, default=ALL_TRAIN_SPLITS)
+    train_parser.add_argument("--dev-splits", type=str, default=ALL_DEV_SPLITS)
 
     # eval
     eval_parser = subparsers.add_parser("eval")

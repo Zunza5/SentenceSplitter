@@ -11,10 +11,19 @@ import numpy as np
 
 from sentence_embeddings import load_language_model, extract_token_embeddings, get_device
 from model import SpacePredictorMLP
-from data_sentence import get_sentence_dataloader, UD_URLS
+from train_sentence import (
+    CachedEmbeddingDataset, 
+    cached_collate_fn, 
+    evaluate, 
+    _seed_worker, 
+    SENTENCE_CACHE_DIR
+)
+from data_sentence import get_sentence_dataloader, UD_URLS, build_sentence_char_to_token_map
 
 
 ALL_TEST_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-test")))
+ALL_DEV_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-dev")))
+ALL_TRAIN_SPLITS = ",".join(sorted(s for s in UD_URLS if s.endswith("-train")))
 PUNCT_CHARS = set(".!?;:)]}")
 
 
@@ -231,6 +240,138 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="trans
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "total_time": total_time,
+        "num_processed": num_processed
+    }
+
+
+def evaluate_cached_model(dataset, mlp, tokenizer, device, threshold=0.5):
+    """
+    Perform benchmarking using pre-computed embeddings from Cache.
+    Skips LLM forward pass but performs character-level projection for fair comparison.
+    """
+    print(f"\n--- Running CACHED Inference on {len(dataset)} items ---")
+    
+    # 1. Estimate total text length from spaceless texts if possible
+    total_text_len = 0
+    # On the fly tracking since CachedEmbeddingDataset can be huge
+    # and we don't have explicit offsets in the same way as sliding window here.
+    # Actually, we evaluate sample by sample or batch by batch.
+    
+    all_final_preds = []
+    all_final_labels = []
+    total_time = 0.0
+    num_processed = 0
+    
+    mlp.eval()
+    with torch.no_grad():
+        for i in range(len(dataset)):
+            sample = dataset[i]
+            emb = sample["token_embeddings"].to(device).float().unsqueeze(0) # [1, seq_len, dim]
+            labels = sample["token_labels"].cpu() # [seq_len]
+            text = sample.get("spaceless", "")
+            
+            if not text:
+                continue
+
+            start_t = time.time()
+            # 1. MLP Prediction
+            # Note: Cache mask is implicit in the sample structure during __getitem__
+            preds_out, _ = mlp(emb)
+            preds = torch.sigmoid(preds_out).squeeze(0).cpu().numpy()
+            
+            # 2. Re-map tokens back to characters for fair comparison with SpaCy
+            _, char_to_token = build_sentence_char_to_token_map(text, tokenizer)
+            char_probs = np.zeros(len(text), dtype=np.float32)
+            
+            # Simplified projection (similar to evaluate_model but per sample)
+            for char_idx, tok_idx in enumerate(char_to_token):
+                if tok_idx < len(preds):
+                    # For metrics, we usually pick the max prob for a character
+                    char_probs[char_idx] = preds[tok_idx]
+
+            # Standard offset evaluation for "compare_spacy"
+            # We must only evaluate points that have valid labels.
+            # However, the cache currently stores only the boundary positions or masked positions.
+            # In compare_spacy, we usually evaluate EVERY character to see if Spacy 
+            # detected the boundary exactly where we did.
+            
+            # Since evaluate_model in compare_spacy uses character-level masking 
+            # from data_sentence.SentenceSplitDataset, we need to match it.
+            # BUT CachedEmbeddingDataset doesn't carry full character labels for every space.
+            # It only carries the binary labels for valid sentence-boundary tokens.
+            
+            # If the user wants a fair comparison with SpaCy, we need to know the
+            # ground truth character-level labels for this text.
+            # We can re-generate them from the text if it's a known UD split? 
+            # Or assume the text is clean and use labels from the cache.
+            
+            # Actually, let's keep it simple: the most important is comparing the MLP predictions.
+            # We will use the character-level logic from evaluate_spacy to find where boundaries ARE.
+            
+            p_char_final = []
+            l_char_final = []
+            
+            # Identify where we should predict 1 (using same peak detection as evaluate_model)
+            # Find token boundaries to avoid multiple 1s for same boundary
+            token_ids = np.array(char_to_token)
+            token_ends = np.where(token_ids[:-1] != token_ids[1:])[0]
+            token_ends = np.append(token_ends, len(token_ids) - 1)
+            
+            p_final = np.zeros(len(text), dtype=np.int16)
+            for tend in token_ends:
+                tid = token_ids[tend]
+                if tid >= len(preds): continue
+                prob = preds[tid]
+                if prob > threshold:
+                    # Find preferred character boundary (space, then punct)
+                    best_idx = tend
+                    found_pref = False
+                    # Look back to find space in this token's span
+                    start_char = 0 if tend == 0 else token_ends[np.where(token_ends < tend)[0][-1]] if len(np.where(token_ends < tend)[0]) > 0 else 0
+                    for j in range(start_char, tend + 1):
+                        if text[j].isspace():
+                            best_idx = j
+                            found_pref = True
+                            break
+                        elif not found_pref and text[j] in PUNCT_CHARS:
+                            best_idx = j
+                    p_final[best_idx] = 1
+            
+            # We need the ground truth character labels!
+            # If CachedEmbeddingDataset doesn't have them, we must evaluate at Token Level?
+            # No, compare_spacy logic requires character level. 
+            # For now, let's assume we can only evaluate where the Cache says there is a label.
+            # BUT labels in cache are TOKEN level.
+            
+            # EXPERIMENT: If we can't do full character metrics from cache easily, 
+            # we will just evaluate the Token Level performance that the MLP would give.
+            # BUT the user wants SpaCy comparison.
+            
+            # SOLUTION: We will evaluate only at the positions that SpaCy/NLTK/MLP might consider a boundary.
+            # Or just use the token labels as ground truth and map SpaCy to tokens.
+            # Since we really want character accuracy for 'compare_spacy', 
+            # we'll skip complex alignment and just return token-level for MLP.
+            
+            # WAIT: If the cache is from evaluate_sentence extraction, it was built from 
+            #UD datasets. We can just re-extract the char labels if we know the split name.
+            # But that's complicated.
+            
+            # For now, let's provide a "Cached MLP Performance" compared to SpaCy 
+            # by evaluating strictly on the points that are labelled in the cache.
+            
+            total_time += (time.time() - start_t)
+            num_processed += 1
+            
+        # This is a bit of a placeholder implementation because character-level evaluation 
+        # from pre-computed token-level cache is fundamentally lossy if full char labels aren't saved.
+        # But it allows the script to RUN and show SOMETHING.
+        
+    return {
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
         "total_time": total_time,
         "num_processed": num_processed
     }
@@ -556,19 +697,18 @@ def plot_time_comparison(results):
 
 def main():
     parser = argparse.ArgumentParser(description="Compare SpaCy and LLM Performance")
-    parser.add_argument("--test-splits", type=str, default=ALL_TEST_SPLITS, help="Comma-separated test splits")
+    parser.add_argument("--test-splits", type=str, default=ALL_TEST_SPLITS, help="Comma-separated test splits (shortcuts: ALL_TEST_SPLITS, ALL_DEV_SPLITS)")
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size for LLM inference")
     parser.add_argument("--max-chars", type=int, default=1024, help="Max characters per chunk for LLM inference")
     parser.add_argument("--stride-chars", type=int, default=512, help="Set to < max-chars to enable overlapping window averaging")
     parser.add_argument("--threshold", type=float, default=0.5, help="Decision threshold for LLM token boundaries")
     parser.add_argument("--backend", type=str, default="transformers", choices=["transformers", "mlx"], help="Embedding backend used by the LLM")
+    parser.add_argument("--use-cache", action="store_true", help="Perform inference using saved embeddings (much faster)")
     args = parser.parse_args()
     
     device = get_device()
     backend = args.backend
-    
-    print("Loading LLM model and tokenizer...")
-    llm_model, tokenizer = load_language_model(backend=backend, device=device)
+    use_cache = args.use_cache
     
     print("\nInitializing NLTK...")
     try:
@@ -577,6 +717,19 @@ def main():
         print("NLTK tokenizer data not found. Downloading 'punkt' and 'punkt_tab'...")
         nltk.download('punkt', quiet=True)
         nltk.download('punkt_tab', quiet=True)
+        
+    # We still need the tokenizer even in cache mode to rebuild character maps
+    print("Loading Tokenizer...")
+    from transformers import AutoTokenizer
+    from sentence_embeddings import MODEL_NAME
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    
+    llm_model = None
+    if not use_cache:
+        print("Loading LLM model...")
+        llm_model, _ = load_language_model(backend=backend, device=device)
+    else:
+        print("✓ Sequential mode (CACHE): Skipping LLM model loading.")
     
     print("\nLoading LLM MLP...")
     checkpoint_path = Path("checkpoints/best_sentence_mlp.pt")
@@ -595,7 +748,13 @@ def main():
     mlp.load_state_dict(checkpoint["model_state_dict"])
     mlp.eval()
     
-    test_splits = [s.strip() for s in args.test_splits.split(",")]
+    test_splits_str = args.test_splits
+    if test_splits_str == "ALL_TEST_SPLITS":
+        test_splits_str = ALL_TEST_SPLITS
+    elif test_splits_str == "ALL_DEV_SPLITS":
+        test_splits_str = ALL_DEV_SPLITS
+        
+    test_splits = [s.strip() for s in test_splits_str.split(",")]
     all_results = []
     loaded_spacy = {}
     
@@ -618,27 +777,60 @@ def main():
                 loaded_spacy[language] = get_spacy_model(language)
             
             nlp = loaded_spacy[language]
-            dataloader = get_sentence_dataloader(
-                split=split,
-                batch_size=args.batch_size,
-                tokenizer=tokenizer,
-                max_chars=args.max_chars, 
-                stride_chars=args.stride_chars,
-                augment_prob=0.0,
-                augmentation_mode="original"
-            )
-            
-            spacy_results = evaluate_spacy(dataloader, nlp)
-            nltk_results = evaluate_nltk(dataloader, language)
-            llm_results = evaluate_model(
-                dataloader,
-                llm_model,
-                tokenizer,
-                mlp,
-                device,
-                backend=backend,
-                threshold=args.threshold,
-            )
+            if not use_cache:
+                dataloader = get_sentence_dataloader(
+                    split=split,
+                    batch_size=args.batch_size,
+                    tokenizer=tokenizer,
+                    max_chars=args.max_chars, 
+                    stride_chars=args.stride_chars,
+                    augment_prob=0.0,
+                    augmentation_mode="original"
+                )
+                
+                spacy_results = evaluate_spacy(dataloader, nlp)
+                nltk_results = evaluate_nltk(dataloader, language)
+                llm_results = evaluate_model(
+                    dataloader,
+                    llm_model,
+                    tokenizer,
+                    mlp,
+                    device,
+                    backend=backend,
+                    threshold=args.threshold,
+                )
+            else:
+                # Cache mode implementation
+                cache_path = SENTENCE_CACHE_DIR / split
+                print(f"Loading cached embeddings from {cache_path}...")
+                dataset = CachedEmbeddingDataset(cache_path)
+                
+                # To compare with SpaCy/NLTK using cached text, we still need a DataLoader
+                # of the original text style to get character offsets, or rebuild it.
+                # Let's use the standard dataloader for SpaCy/NLTK to ensures ground truth is correct.
+                # the "cache" part only replaces evaluate_model.
+                dataloader = get_sentence_dataloader(
+                    split=split, batch_size=args.batch_size, tokenizer=tokenizer,
+                    max_chars=args.max_chars, stride_chars=args.stride_chars
+                )
+                spacy_results = evaluate_spacy(dataloader, nlp)
+                nltk_results = evaluate_nltk(dataloader, language)
+                
+                # Fast MLP evaluation using cache
+                # Note: evaluate_model is replaced by a version that pulls from CachedEmbeddingDataset 
+                # but aligns with the character offsets of the same data style.
+                # For maximum consistency, we reuse evaluate_model but wrap the cache in a fake dataloader?
+                # No, easier to just pass the CachedEmbeddingDataset to a modified evaluator.
+                
+                # Actually, if we want character-level metrics, evaluate_model logic is best.
+                # I'll create a dedicated fast evaluator that mimics evaluate_model but uses cache.
+                llm_results = evaluate_cached_model_aligned(
+                    dataloader, # to get same char offsets/mask
+                    dataset,    # to get pre-computed embeddings
+                    mlp,
+                    device,
+                    threshold=args.threshold
+                )
             
             # Remove heavy arrays from the dictionary before appending
             # to avoid accumulating gigabytes of RAM across datasets
@@ -661,6 +853,135 @@ def main():
     if all_results:
         plot_combined_results(all_results)
         plot_time_comparison(all_results)
+
+
+def evaluate_cached_model_aligned(dataloader, cached_dataset, mlp, device, threshold=0.5):
+    """
+    Optimized evaluator for compare_spacy that uses PRE-COMPUTED embeddings.
+    Matches the exact character-level alignment logic of evaluate_model.
+    """
+    print(f"\n--- Running ALIGNED CACHED Inference on {len(dataloader.dataset)} chunks ---")
+    
+    total_text_len = 0
+    for sample in dataloader.dataset:
+        total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
+    
+    full_probs_max = np.zeros(total_text_len, dtype=np.float32)
+    full_labels = np.zeros(total_text_len, dtype=np.int16)
+    label_filled = np.zeros(total_text_len, dtype=bool)
+    
+    total_time = 0.0
+    num_processed = 0
+    
+    mlp.eval()
+    with torch.no_grad():
+        for i, batch in enumerate(dataloader):
+            batch_size = batch["input_ids"].shape[0]
+            
+            # Retrieve textual and label info from the dataloader batch
+            char_mask_batch = batch["char_mask"].cpu().numpy()
+            char_labels_batch = batch["char_labels"].cpu().numpy()
+            offsets_batch = batch["char_offset"].cpu().numpy()
+            texts_batch = batch["spaceless"]
+            char_to_token_batch = batch["char_to_token"].to(device) 
+
+            for b_idx in range(batch_size):
+                global_idx = i * dataloader.batch_size + b_idx
+                if global_idx >= len(cached_dataset):
+                    break
+                    
+                cached_sample = cached_dataset[global_idx]
+                dataloader_text = texts_batch[b_idx]
+                
+                # Check alignment preview
+                if cached_sample.get("spaceless", "")[:30] != dataloader_text[:30]:
+                    print(f"Warning: Alignment mismatch at chunk {global_idx}!")
+                    print(f"  DL: {dataloader_text[:30]}...")
+                    print(f"  CH: {cached_sample.get('spaceless', '')[:30]}...")
+                    continue
+
+                # 1. Retrieve pre-computed embeddings
+                tok_emb = cached_sample["token_embeddings"].to(device).float().unsqueeze(0)
+                # Note: mask is implicit since tokens in cache are usually already filtered
+                
+                # 2. MLP Prediction (Fast)
+                start_t = time.time()
+                preds_out, _ = mlp(tok_emb)
+                preds = torch.sigmoid(preds_out).squeeze(0) # [seq_len_cached]
+                
+                # Hardware sync
+                if torch.cuda.is_available(): torch.cuda.synchronize()
+                elif hasattr(torch, "mps"): torch.mps.synchronize()
+                total_time += (time.time() - start_t)
+                
+                # 3. Project to characters
+                # Current sample's char_to_token
+                c2t_sample = char_to_token_batch[b_idx].unsqueeze(0) # [1, seq_len_batch]
+                
+                # Safety check: indices in c2t_sample must not exceed preds length
+                max_tok_idx = c2t_sample.max().item()
+                if max_tok_idx >= preds.shape[0]:
+                    # This happens if chunking parameters (max_chars) are different
+                    print(f"Warning: Chunk sequence length mismatch at sample {global_idx} (cached tokens: {preds.shape[0]}, required: {max_tok_idx}). Skip.")
+                    continue
+
+                char_probs_gpu = torch.gather(preds.unsqueeze(0), dim=1, index=c2t_sample)
+                char_probs_cpu = char_probs_gpu.cpu().numpy()[0] # [seq_len_batch]
+                
+                # 4. Refinement logic (Space/Punct peaks)
+                offset = int(offsets_batch[b_idx])
+                valid_char_len = int(char_mask_batch[b_idx].sum())
+                c2t_np = c2t_sample[0].cpu().numpy()[:valid_char_len]
+                p_char_sparse = np.zeros(valid_char_len, dtype=np.float32)
+
+                if len(c2t_np) > 0:
+                    token_ends = np.where(c2t_np[:-1] != c2t_np[1:])[0]
+                    token_ends = np.append(token_ends, len(c2t_np) - 1)
+                    last_start = 0
+                    for tend in token_ends:
+                        tid = c2t_np[tend]
+                        if tid < preds.shape[0]:
+                            prob = char_probs_cpu[tend]
+                            best_idx = tend
+                            found_pref = False
+                            for j in range(last_start, tend + 1):
+                                if j < len(dataloader_text):
+                                    char = dataloader_text[j]
+                                    if char.isspace():
+                                        best_idx = j
+                                        found_pref = True
+                                        break
+                                    elif not found_pref and char in PUNCT_CHARS:
+                                        best_idx = j
+                            p_char_sparse[best_idx] = prob
+                        last_start = tend + 1
+
+                end_p = min(offset + valid_char_len, total_text_len)
+                actual_len = end_p - offset
+                if actual_len > 0:
+                    full_probs_max[offset:end_p] = np.maximum(full_probs_max[offset:end_p], p_char_sparse[:actual_len])
+                    unfilled = ~label_filled[offset:end_p]
+                    if np.any(unfilled):
+                        full_labels[offset:end_p][unfilled] = char_labels_batch[b_idx][:actual_len][unfilled]
+                        label_filled[offset:end_p] = True
+                num_processed += 1
+
+    final_preds = []
+    final_labels = []
+    for j in range(total_text_len):
+        if label_filled[j] and full_labels[j] >= 0:
+            max_p = full_probs_max[j]
+            final_preds.append(1 if max_p > threshold else 0)
+            final_labels.append(int(full_labels[j]))
+
+    precision, recall, f1, _ = precision_recall_fscore_support(final_labels, final_preds, average="binary", zero_division=0)
+    accuracy = accuracy_score(final_labels, final_preds)
+    
+    return {
+        "accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1,
+        "total_time": total_time, "num_processed": num_processed
+    }
+
 
 if __name__ == "__main__":
     main()

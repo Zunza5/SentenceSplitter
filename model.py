@@ -95,12 +95,12 @@ class MultiScaleConv1d(nn.Module):
 
 class ExpertBlock(nn.Module):
     """
-    Standard Feed-Forward Network used as an expert in MoE.
-    Replaces the heavy self-attention layer for true sparse execution.
+    Semplice Feed-Forward Network per il MoE.
+    Molto più leggero e matematicamente corretto rispetto alla Self-Attention in questo step.
     """
-    def __init__(self, d_model: int, dropout: float = 0.1):
+    def __init__(self, d_model: int, nhead: int = 4, dropout: float = 0.1):
         super().__init__()
-        # Expand dimension usually by 4x in standard transformers
+        # Ignoriamo 'nhead' ma lo teniamo per compatibilità con l'init originale
         self.ffn = nn.Sequential(
             nn.Linear(d_model, d_model * 4),
             nn.GELU(),
@@ -143,76 +143,46 @@ class MoELayer(nn.Module):
 
         self.router = nn.Linear(d_model, self.num_experts)
         self.experts = nn.ModuleList([
-            ExpertBlock(d_model, dropout=dropout)
+            ExpertBlock(d_model, nhead=nhead, dropout=dropout)
             for _ in range(self.num_experts)
         ])
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
-        """
-        Args:
-            x: (batch, seq_len, d_model)
-            mask: (batch, seq_len) bool, True for valid positions
-        Returns:
-            output: (batch, seq_len, d_model) — weighted expert mixture
-            aux_loss: scalar — load-balancing loss
-        """
-        # Router probabilities over all experts: (batch, seq_len, num_experts)
+        # 1. Router probabilities
         gate_logits = self.router(x)
         gate_probs = F.softmax(gate_logits, dim=-1)
 
-        # Hard top-k routing: keep only the best-k experts per token.
+        # 2. Hard top-k routing
         topk_vals, topk_idx = torch.topk(gate_probs, k=self.top_k, dim=-1)
         hard_weights = torch.zeros_like(gate_probs)
         hard_weights.scatter_(-1, topk_idx, topk_vals)
         hard_weights = hard_weights / hard_weights.sum(dim=-1, keepdim=True).clamp_min(1e-9)
 
-        # Sparse execution: run only experts selected by top-k in this batch.
+        output = torch.zeros_like(x)
+        
+        # TROVATA PER MAC/MPS: Calcolo denso ma con MLP leggeri.
+        # Evita masking e gather/scatter che distruggono le prestazioni di Apple Silicon.
+        
+        # Identifichiamo quali esperti sono attivi nel batch per saltare quelli totalmente inutilizzati
         if mask is not None:
             active_selector = hard_weights * mask.unsqueeze(-1).float()
         else:
             active_selector = hard_weights
-        active_experts = (active_selector.sum(dim=(0, 1)) > 0).nonzero(as_tuple=False).flatten().tolist()
-
-        # Sparse execution: process only the tokens assigned to each expert
-        output = torch.zeros_like(x)
-        
-        # Flatten tensors to simplify token extraction
-        flat_x = x.view(-1, x.size(-1))
-        flat_weights = hard_weights.view(-1, self.num_experts)
-        
-        if mask is not None:
-            flat_mask = mask.view(-1).bool()
-        else:
-            flat_mask = torch.ones(flat_x.size(0), dtype=torch.bool, device=x.device)
+            
+        expert_usage = active_selector.sum(dim=(0, 1))
+        active_experts = (expert_usage > 0).nonzero(as_tuple=False).flatten().tolist()
 
         for expert_idx in active_experts:
-            # Find tokens assigned to this expert that are also valid (unmasked)
-            expert_mask = (flat_weights[:, expert_idx] > 0) & flat_mask
+            # Calcolo super-ottimizzato (MatMul puro) su tutta la sequenza
+            expert_out = self.experts[expert_idx](x) 
             
-            if not expert_mask.any():
-                continue
-                
-            # Gather only the relevant tokens
-            assigned_tokens = flat_x[expert_mask]
-            
-            # Process through the FFN expert
-            expert_out = self.experts[expert_idx](assigned_tokens)
-            
-            # Apply router weight
-            weight = flat_weights[expert_mask, expert_idx].unsqueeze(-1)
-            weighted_out = expert_out * weight
-            
-            # Scatter results back to the flattened output tensor
-            flat_output = output.view(-1, x.size(-1))
-            flat_output[expert_mask] += weighted_out
+            # Moltiplichiamo per i pesi (i token non assegnati a questo esperto hanno peso 0)
+            weight = hard_weights[:, :, expert_idx].unsqueeze(-1)
+            output = output + (expert_out * weight)
 
-        # ── Load-balancing auxiliary loss (Switch Transformer style) ──────
-        # f_i = fraction of tokens dispatched to expert i (based on argmax)
-        # P_i = mean router probability for expert i
-        # L_balance = num_experts * sum(f_i * P_i)
+        # ── Load-balancing auxiliary loss ──────
         if mask is not None:
-            # Only consider valid (non-padding) positions
-            valid_probs = gate_probs[mask.bool()]  # (num_valid, num_experts)
+            valid_probs = gate_probs[mask.bool()]
         else:
             valid_probs = gate_probs.reshape(-1, self.num_experts)
 
@@ -220,15 +190,12 @@ class MoELayer(nn.Module):
             aux_loss = torch.tensor(0.0, device=x.device)
             return output, aux_loss
 
-        # f_i: fraction of tokens where expert i has the highest gate
-        assignments = valid_probs.argmax(dim=-1)  # (num_valid,)
+        assignments = valid_probs.argmax(dim=-1)
         f = torch.zeros(self.num_experts, device=x.device)
         for i in range(self.num_experts):
             f[i] = (assignments == i).float().mean()
 
-        # P_i: mean probability assigned to expert i
-        P = valid_probs.mean(dim=0)  # (num_experts,)
-
+        P = valid_probs.mean(dim=0)
         aux_loss = self.num_experts * (f * P).sum()
 
         return output, aux_loss

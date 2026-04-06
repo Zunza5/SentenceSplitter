@@ -314,7 +314,19 @@ def train_sentence_mlp(
             train_datasets.append(CachedEmbeddingDataset(aug_path))
             
     train_ds = ConcatDataset(train_datasets)
-    dev_ds = ConcatDataset([CachedEmbeddingDataset(SENTENCE_CACHE_DIR / s) for s in dev_splits])
+    
+    # Macro-F1: individual loaders for each dev split
+    dev_loaders = {}
+    for s in dev_splits:
+        ds = CachedEmbeddingDataset(SENTENCE_CACHE_DIR / s)
+        dev_loaders[s] = DataLoader(
+            ds, 
+            batch_size=batch_size, 
+            shuffle=False,
+            collate_fn=cached_collate_fn, 
+            num_workers=0, # num_workers=0 safe for Mac
+            worker_init_fn=_seed_worker
+        )
     
     hidden_dim = train_ds[0]["token_embeddings"].shape[-1]
     print(f"Detected model hidden_dim: {hidden_dim}")
@@ -350,16 +362,10 @@ def train_sentence_mlp(
             worker_init_fn=_seed_worker,
             generator=train_gen,
         )
-    dev_loader = DataLoader(
-        dev_ds,
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=cached_collate_fn,
-        num_workers=max(0, num_workers // 2),
-        worker_init_fn=_seed_worker,
-    )
+    # Note: Collective metrics tracking for dev is handled in the loop below
+    total_dev_samples = sum(len(loader.dataset) for loader in dev_loaders.values())
 
-    print(f"Train samples: {len(train_ds)}, Dev samples: {len(dev_ds)}")
+    print(f"Train samples: {len(train_ds)}, Dev samples (total): {total_dev_samples}")
     print(f"Balanced datasets: {balanced_batches}")
     print(f"MoE aux_weight: {aux_weight}")
     print(f"Model d_model: {d_model}")
@@ -407,20 +413,27 @@ def train_sentence_mlp(
             pbar.set_postfix({"loss": f"{loss_total.item():.4f}", "aux": f"{moe_aux_loss.item():.3f}"})
 
         avg_loss = total_loss / max(num_batches, 1)
-        metrics = evaluate(mlp, dev_loader, device)
-        scheduler.step(metrics["f1"])
+        
+        # 4. Evaluation using Macro-F1 (arithmetic mean across datasets)
+        print(f"\n--- Valutazione Epoca {epoch} ---")
+        macro_f1 = 0.0
+        
+        for dev_name, loader in dev_loaders.items():
+            metrics = evaluate(mlp, loader, device)
+            macro_f1 += metrics['f1']
+            print(f"[{dev_name:12}] Acc: {metrics['accuracy']:.4f} │ P: {metrics['precision']:.4f} │ R: {metrics['recall']:.4f} │ F1: {metrics['f1']:.4f}")
+        
+        macro_f1 = macro_f1 / len(dev_loaders)
+        print(f"MACRO F1 SCORE: {macro_f1:.4f} (Avg across all Dev splits)")
+
+        scheduler.step(macro_f1)
 
         print(
-            f"Epoch {epoch:2d}/{epochs} │ "
-            f"Loss: {avg_loss:.4f} │ "
-            f"Acc: {metrics['accuracy']:.4f} │ "
-            f"P: {metrics['precision']:.4f} │ "
-            f"R: {metrics['recall']:.4f} │ "
-            f"F1: {metrics['f1']:.4f}"
+            f"Epoch {epoch:2d}/{epochs} │ Loss: {avg_loss:.4f} │ MACRO F1: {macro_f1:.4f}"
         )
 
-        if metrics["f1"] > best_f1:
-            best_f1 = metrics["f1"]
+        if macro_f1 > best_f1:
+            best_f1 = macro_f1
             patience_counter = 0
             torch.save(
                 {
@@ -437,11 +450,11 @@ def train_sentence_mlp(
                 },
                 BEST_SENTENCE_CKPT,
             )
-            print(f"  → Saved best checkpoint (F1={best_f1:.4f})")
+            print(f"  → Saved best checkpoint (Macro F1={best_f1:.4f})")
         else:
             patience_counter += 1
             if patience_counter >= patience:
                 print(f"\n⏹️ Early stopping at epoch {epoch}")
                 break
 
-    print(f"\n✓ Training complete. Best F1: {best_f1:.4f}")
+    print(f"\n✓ Training complete. Best MACRO F1: {best_f1:.4f}")
