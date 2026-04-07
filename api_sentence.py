@@ -11,16 +11,19 @@ from data_sentence import build_sentence_char_to_token_map
 from compare_spacy import canonicalize_boundary_index, PUNCT_CHARS
 
 class SentenceSplitterAPI:
-    def __init__(self, checkpoint_path="checkpoints/best_sentence_mlp.pt", backend="transformers", threshold=0.5):
+    def __init__(self, checkpoint_path="checkpoints/best_sentence_mlp.pt", backend="transformers", threshold=0.5, max_chars=1024, stride_chars=512, batch_size=8):
         """
         Initializes the API by loading models into memory ONCE.
-        This avoids the "cold start" (10-15 seconds of loading) on every call.
+        This version supports Sliding Window aggregation with batching for maximum throughput.
         """
         self.device = get_device()
         self.backend = backend
         self.threshold = threshold
+        self.max_chars = max_chars
+        self.stride_chars = stride_chars
+        self.batch_size = batch_size
         
-        print(f"🔄 Initializing SentenceSplitterAPI on {self.device} (Backend: {backend})...")
+        print(f"🔄 Initializing SentenceSplitterAPI on {self.device} (Backend: {backend}, Window: {max_chars}/{stride_chars}, Batch: {batch_size})...")
         
         # 1. Load Qwen (LLM) and Tokenizer
         self.llm_model, self.tokenizer = load_language_model(backend=self.backend, device=self.device)
@@ -49,88 +52,101 @@ class SentenceSplitterAPI:
         
         print("✅ Models loaded and ready for inference.")
 
-    def split_text(self, text: str) -> list[str]:
+    def get_boundaries(self, text: str) -> list[int]:
         """
-        Takes a block of text, calculates boundaries, and returns the array of sentences.
-        Optimized for texts up to ~2000-3000 characters at a time.
+        Core method: returns the character indices where sentence boundaries were detected.
+        Uses Sliding Window with Binary Voting aggregation.
         """
         if not text or not text.strip():
             return []
 
-        # 1. Tokenization and Mapping (Same logic as compare_spacy.py)
-        enc = self.tokenizer(text, return_tensors="pt", add_special_tokens=True)
-        input_ids = enc["input_ids"].to(self.device)
-        attention_mask = enc["attention_mask"].to(self.device)
+        total_len = len(text)
+        full_preds_sum = np.zeros(total_len, dtype=np.float32)
+        full_preds_count = np.zeros(total_len, dtype=np.int32)
         
-        _, char_to_token = build_sentence_char_to_token_map(text, self.tokenizer)
-        c2t_np = np.array(char_to_token)
-        valid_char_len = len(text)
-        
-        # 2. Extraction and Inference
-        with torch.no_grad():
-            tok_emb = extract_token_embeddings(self.llm_model, input_ids, attention_mask, backend=self.backend)
-            tok_emb = tok_emb.float()
-            
-            preds_out, _ = self.mlp(tok_emb)
-            preds_prob = torch.sigmoid(preds_out).squeeze(0).cpu().numpy()
-            
-        # 3. Probability projection on characters and boundary search
-        boundaries = []
-        unique_tokens = np.unique(c2t_np)
-        
-        for tok_idx in unique_tokens:
-            if tok_idx <= 0 or tok_idx >= len(preds_prob):
-                continue # Skip special tokens (e.g., CLS)
-                
-            prob = preds_prob[tok_idx]
-            if prob > self.threshold:
-                # Find all characters mapped to this candidate token
-                char_indices = np.where(c2t_np == tok_idx)[0]
-                best_idx = char_indices[0]
-                
-                # Search for a space to cut cleanly
-                for c_idx in char_indices:
-                    if text[c_idx].isspace():
-                        best_idx = c_idx
-                        break
-                        
-                # Refine with jitter-resistant logic
-                best_idx = int(canonicalize_boundary_index(text, best_idx, valid_char_len))
-                boundaries.append(best_idx)
-                
-        # Remove duplicates and sort chronologically
-        boundaries = sorted(list(set(boundaries)))
-        
-        # 4. Slice the original text using the calculated boundaries
-        sentences = []
+        # 1. Prepare overlapping chunks
+        chunks = []
         start = 0
-        for b in boundaries:
-            if b > start:
-                sentence = text[start:b].strip()
-                if sentence:
-                    sentences.append(sentence)
-            start = b
-            
-        # Add the last remaining piece of text
-        if start < len(text):
-            final_sentence = text[start:].strip()
-            if final_sentence:
-                sentences.append(final_sentence)
+        while start < total_len:
+            end = min(start + self.max_chars, total_len)
+            chunks.append((start, end, text[start:end]))
+            if end == total_len: break
+            start += self.stride_chars
+
+        # 2. Process chunks in batches
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        for i in range(0, len(chunks), self.batch_size):
+            batch_chunks = chunks[i:i + self.batch_size]
+            batch_texts = [c[2] for c in batch_chunks]
                 
+            enc = self.tokenizer(batch_texts, return_tensors="pt", add_special_tokens=True, padding=True)
+            input_ids = enc["input_ids"].to(self.device)
+            attention_mask = enc["attention_mask"].to(self.device)
+            
+            with torch.no_grad():
+                tok_emb = extract_token_embeddings(self.llm_model, input_ids, attention_mask, backend=self.backend)
+                preds_out, _ = self.mlp(tok_emb.float())
+                preds_prob = torch.sigmoid(preds_out).cpu().numpy()
+            
+            for b_idx, (start_idx, end_idx, chunk_text) in enumerate(batch_chunks):
+                _, char_to_token = build_sentence_char_to_token_map(chunk_text, self.tokenizer)
+                c2t_np = np.array(char_to_token)
+                p_chunk_sparse = np.zeros(len(chunk_text), dtype=np.float32)
+                unique_tokens = np.unique(c2t_np)
+                chunk_preds = preds_prob[b_idx]
+                
+                for tok_idx in unique_tokens:
+                    if tok_idx <= 0 or tok_idx >= len(chunk_preds): continue
+                    
+                    if chunk_preds[tok_idx] > self.threshold:
+                        char_indices = np.where(c2t_np == tok_idx)[0]
+                        best_idx = char_indices[0]
+                        for c_idx in char_indices:
+                            if chunk_text[c_idx].isspace():
+                                best_idx = c_idx
+                                break
+                        
+                        best_idx = int(canonicalize_boundary_index(chunk_text, best_idx, len(chunk_text)))
+                        p_chunk_sparse[best_idx] = 1.0
+
+                full_preds_sum[start_idx:end_idx] += p_chunk_sparse
+                full_preds_count[start_idx:end_idx] += 1
+
+        # 3. Final Consensus (Binary Agreement)
+        boundaries = []
+        for j in range(total_len):
+            if full_preds_count[j] > 0:
+                avg_p = full_preds_sum[j] / full_preds_count[j]
+                if avg_p >= 0.5:
+                    boundaries.append(j)
+
+        return sorted(set(boundaries))
+
+    def split_document(self, text: str) -> list[str]:
+        """
+        Splits a document into sentences using the Sliding Window pipeline.
+        Delegates boundary detection to get_boundaries().
+        """
+        if not text or not text.strip():
+            return []
+
+        boundaries = self.get_boundaries(text)
+        
+        sentences = []
+        last_break = 0
+        for b in boundaries:
+            if b > last_break:
+                piece = text[last_break:b].strip()
+                if piece: sentences.append(piece)
+            last_break = b
+            
+        final_piece = text[last_break:].strip()
+        if final_piece: sentences.append(final_piece)
+        
         return sentences
 
-    def split_document(self, document_text: str) -> list[str]:
-        """
-        Safety function for the hackathon.
-        Splits text by paragraphs (newlines) first to prevent OOM on massive documents.
-        """
-        paragraphs = document_text.split('\n')
-        all_sentences = []
-        
-        for p in paragraphs:
-            if p.strip():
-                # Process individual paragraph
-                sents = self.split_text(p)
-                all_sentences.extend(sents)
-                
-        return all_sentences
+    def split_text(self, text: str) -> list[str]:
+        """Alias for split_document."""
+        return self.split_document(text)
