@@ -3,42 +3,42 @@ from pathlib import Path
 
 def clean_and_separate_sent_split(base_dir: str):
     """
-    Legge i file .sent_split, rimuove i tag <EOS> e salva in nuovi file separati.
+    Reads .sent_split files, removes <EOS> tags, and saves them into new separate files.
     """
     base_path = Path(base_dir)
     
     if not base_path.exists():
-        print(f"Errore: La cartella '{base_dir}' non esiste.")
+        print(f"Error: Folder '{base_dir}' does not exist.")
         return
 
-    # Trova ricorsivamente tutti i file .sent_split nelle sottocartelle
-    # come UD_Italian-ISDT o UD_English-EWT
+    # Recursively find all .sent_split files in subfolders
+    # such as UD_Italian-ISDT or UD_English-EWT
     files = list(base_path.rglob("*.sent_split"))
-    print(f"Trovati {len(files)} file da elaborare.")
+    print(f"Found {len(files)} files to process.")
 
     for file_path in files:
         try:
-            # Apertura del file originale in lettura
+            # Open the original file for reading
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Sostituzione del tag <EOS> con il nulla (stringa vuota)
+            # Replace <EOS> tag with an empty string
             cleaned_content = content.replace("<EOS>", "")
             
-            # Definizione del nuovo percorso file (es. nomefile.sent_split.cleaned)
-            # Questo garantisce che il file sia salvato separatamente
+            # Define new file path (e.g., filename.sent_split.cleaned)
+            # This ensures the file is saved separately
             new_file_path = file_path.with_suffix(file_path.suffix + ".cleaned")
 
-            # Scrittura del contenuto pulito nel nuovo file
+            # Write cleaned content to the new file
             with open(new_file_path, "w", encoding="utf-8") as f:
                 f.write(cleaned_content)
             
-            print(f"Creato file pulito: {new_file_path.name}")
+            print(f"Created cleaned file: {new_file_path.name}")
             
         except Exception as e:
-            print(f"Errore durante l'elaborazione di {file_path}: {e}")
+            print(f"Error processing {file_path}: {e}")
 
 if __name__ == "__main__":
-    # Percorso della cartella contenente i dataset
+    # Path to the directory containing datasets
     data_dir = "sent_split_data"
     clean_and_separate_sent_split(data_dir)

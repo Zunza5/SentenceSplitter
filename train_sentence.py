@@ -415,7 +415,7 @@ def train_sentence_mlp(
         avg_loss = total_loss / max(num_batches, 1)
         
         # 4. Evaluation using Macro-F1 (arithmetic mean across datasets)
-        print(f"\n--- Valutazione Epoca {epoch} ---")
+        print(f"\n--- Epoch {epoch} Evaluation ---")
         macro_f1 = 0.0
         
         for dev_name, loader in dev_loaders.items():
@@ -454,7 +454,7 @@ def train_sentence_mlp(
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print(f"\n⏹️ Early stopping at epoch {epoch}")
+                print(f"\nEarly stopping at epoch {epoch}")
                 break
 
     print(f"\n✓ Training complete. Best MACRO F1: {best_f1:.4f}")

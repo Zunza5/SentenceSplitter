@@ -99,11 +99,7 @@ python compare_spacy.py --test-splits ALL_TEST_SPLITS --use-cache
 ```
 
 ### Benchmark results (MPS - Apple Silicon)
-| Model          | Accuracy | Precision | Recall | F1 Score |
-|----------------|----------|-----------|--------|----------|
-| SpaCy (LG)     | 0.9997   | 0.9721    | 0.9947 | 0.9833   |
-| NLTK (Punkt)   | 0.9988   | 0.9585    | 0.9055 | 0.9313   |
-| **Minerva (MoE)** | **0.9999** | **0.9946** | **0.9911** | **0.9929** |
+![F1 Comparison Results](f1_comparison.png)
 
 ---
 

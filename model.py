@@ -95,12 +95,12 @@ class MultiScaleConv1d(nn.Module):
 
 class ExpertBlock(nn.Module):
     """
-    Semplice Feed-Forward Network per il MoE.
-    Molto più leggero e matematicamente corretto rispetto alla Self-Attention in questo step.
+    Simple Feed-Forward Network for MoE.
+    Much lighter and mathematically cleaner than Self-Attention for this specific task.
     """
     def __init__(self, d_model: int, nhead: int = 4, dropout: float = 0.1):
         super().__init__()
-        # Ignoriamo 'nhead' ma lo teniamo per compatibilità con l'init originale
+        # Ignore 'nhead' but keep it for compatibility with original initialization
         self.ffn = nn.Sequential(
             nn.Linear(d_model, d_model * 4),
             nn.GELU(),
@@ -160,10 +160,10 @@ class MoELayer(nn.Module):
 
         output = torch.zeros_like(x)
         
-        # TROVATA PER MAC/MPS: Calcolo denso ma con MLP leggeri.
-        # Evita masking e gather/scatter che distruggono le prestazioni di Apple Silicon.
+        # MAC/MPS OPTIMIZATION: Dense calculation with lightweight MLPs.
+        # Avoids masking and gather/scatter operations that degrade performance on Apple Silicon.
         
-        # Identifichiamo quali esperti sono attivi nel batch per saltare quelli totalmente inutilizzati
+        # Identify which experts are active in the batch to skip totally unused ones
         if mask is not None:
             active_selector = hard_weights * mask.unsqueeze(-1).float()
         else:
@@ -173,10 +173,10 @@ class MoELayer(nn.Module):
         active_experts = (expert_usage > 0).nonzero(as_tuple=False).flatten().tolist()
 
         for expert_idx in active_experts:
-            # Calcolo super-ottimizzato (MatMul puro) su tutta la sequenza
+            # Highly optimized calculation (pure MatMul) over the entire sequence
             expert_out = self.experts[expert_idx](x) 
             
-            # Moltiplichiamo per i pesi (i token non assegnati a questo esperto hanno peso 0)
+            # Multiply by weights (tokens not assigned to this expert have weight 0)
             weight = hard_weights[:, :, expert_idx].unsqueeze(-1)
             output = output + (expert_out * weight)
 

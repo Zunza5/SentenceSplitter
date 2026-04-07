@@ -165,7 +165,7 @@ def finetune_mlp(
         avg_loss = total_loss / max(num_batches, 1)
         
         # 4. Evaluation using Macro-F1 (arithmetic mean across datasets)
-        print(f"\n--- Valutazione Epoca {epoch} ---")
+        print(f"\n--- Epoch {epoch} Evaluation ---")
         macro_f1 = 0.0
         
         for dev_name, loader in dev_loaders.items():
@@ -197,7 +197,7 @@ def finetune_mlp(
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print(f"\n⏹️ Early stopping at epoch {epoch}")
+                print(f"\nEarly stopping at epoch {epoch}")
                 break
 
     print(f"\n✓ Fine-Tuning complete. Best MACRO F1: {best_f1:.4f}")
@@ -205,12 +205,12 @@ def finetune_mlp(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tune the Sentence MLP on hard datasets")
-    parser.add_argument("--train-splits", type=str, default="en-gum-train, en-ewt-train, en-partut-train", help="Comma-separated train splits")
-    parser.add_argument("--dev-splits", type=str, default="en-gum-dev, en-ewt-dev, en-partut-dev", help="Comma-separated dev splits")
+    parser.add_argument("--train-splits", type=str, default="it-markit-train, it-partut-train, it-isdt-train, it-vit-train, en-partut-train, en-gum-train, en-ewt-train", help="Comma-separated train splits")
+    parser.add_argument("--dev-splits", type=str, default="it-markit-dev, it-partut-dev, it-isdt-dev, it-vit-dev, en-partut-dev, en-gum-dev, en-ewt-dev", help="Comma-separated dev splits")
     parser.add_argument("--base-ckpt", type=str, default="best_sentence_mlp.pt", help="Base checkpoint name (in checkpoints/)")
     parser.add_argument("--output-ckpt", type=str, default="finetuned_sentence_mlp.pt", help="Output checkpoint fixed name")
     
-    parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate for fine-tuning")
+    parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate for fine-tuning")
     parser.add_argument("--epochs", type=int, default=10, help="Max epochs")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--dropout", type=float, default=0.5)

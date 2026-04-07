@@ -73,6 +73,30 @@ def _resolve_char_target_idx(local_text: str, local_start: int, local_end: int, 
         return prev_idx
     return None
 
+def canonicalize_boundary_index(text: str, index: int, max_range: int):
+    """
+    Standardizes the character offset for a detected sentence boundary across all models.
+    Refined specifically to handle tokenization jitter (look-back/forward within 1 char).
+    """
+    if index < 0 or index >= max_range:
+        return index
+        
+    # UD/SentSplit labels are ideally on the space FOLLOWING the sentence-ending punct.
+    # 1. If we are on a space, but preceded by a punctuation, it's already canonical.
+    if text[index].isspace() and index > 0 and text[index-1] in PUNCT_CHARS:
+        return index
+        
+    # 2. If we are on punctuation, check if we should be on the NEXT space instead.
+    if text[index] in PUNCT_CHARS:
+        if index + 1 < max_range and text[index+1].isspace():
+            return index + 1
+            
+    # 3. If the next char is a space after punctuation, shift there. (Jitter-resistance)
+    if index + 2 < max_range and text[index+1] in PUNCT_CHARS and text[index+2].isspace():
+        return int(index + 2)
+        
+    return int(index)
+
 def get_spacy_model(language):
     model_name = "it_core_news_lg" if language == "italian" else "en_core_web_lg"
     try:
@@ -85,25 +109,25 @@ def get_spacy_model(language):
 def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="transformers", threshold=0.5):
     print(f"\n--- Running LLM Inference on {len(dataloader.dataset)} chunks ---")
     
-    # Pre-determine total length to initialize buffers
     total_text_len = 0
     for sample in dataloader.dataset:
         total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
     
-    full_probs_max = np.zeros(total_text_len, dtype=np.float32)
+    # Unified Aggregation: Sum and Count of RAW probabilities (Scientifically sound)
+    full_preds_sum = np.zeros(total_text_len, dtype=np.float32)
+    full_preds_count = np.zeros(total_text_len, dtype=np.int32)
     full_labels = np.zeros(total_text_len, dtype=np.int16)
     label_filled = np.zeros(total_text_len, dtype=bool)
     
     total_time = 0.0
-    time_inference = 0.0
     num_processed = 0
     
+    mlp.eval()
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
             token_mask = batch["token_mask"].to(device)
-            # Retrieve the mapping directly from the dataloader
             char_to_token = batch["char_to_token"].to(device) 
             
             labels = batch["char_labels"]
@@ -111,34 +135,29 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="trans
             offsets = batch["char_offset"]
             texts = batch["spaceless"]
             
+            # Start timing (strictly encompassing GPU work)
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            elif hasattr(torch, "mps"): torch.mps.synchronize()
             start_batch = time.time()
             
             # 1. LLM Forward Pass
             tok_emb = extract_token_embeddings(llm_model, input_ids, attention_mask, backend=backend)
             tok_emb = tok_emb.float()
             
-            # 2. MLP Prediction
-            preds, _ = mlp(tok_emb, mask=token_mask)
+            # 2. MLP Prediction (Raw continuous logits/probabilities)
+            preds_out, _ = mlp(tok_emb, mask=token_mask)
+            preds_prob = torch.sigmoid(preds_out)
             
-            # 3. Vectorized Projection: Map tokens to characters instantly on GPU
-            char_probs = torch.gather(preds, dim=1, index=char_to_token)
+            # 3. Vectorized Projection to Characters
+            char_probs_batch = torch.gather(preds_prob, dim=1, index=char_to_token)
             
-            # Hardware synchronization to ensure accurate timing of GPU operations
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-            elif hasattr(torch, "mps") and hasattr(torch.mps, "synchronize"):
-                torch.mps.synchronize()
-                
+            # Hardware synchronization for fair timing
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            elif hasattr(torch, "mps"): torch.mps.synchronize()
             end_inference = time.time()
             
-            # This is the exact total inference time for the batch (LLM + MLP + Projection)
-            time_inference += (end_inference - start_batch)
-            
-            # Free VRAM immediately
-            del tok_emb, preds
-            
-            # Move results to CPU only after all hardware computations are done
-            char_probs_cpu = char_probs.cpu().numpy()
+            # Moving results to CPU for mapping
+            char_probs_cpu = char_probs_batch.cpu().numpy()
             mask_cpu = mask.numpy()
             labels_cpu = labels.numpy()
             offsets_cpu = offsets.numpy()
@@ -146,102 +165,71 @@ def evaluate_model(dataloader, llm_model, tokenizer, mlp, device, backend="trans
             for b in range(char_probs_cpu.shape[0]):
                 offset = int(offsets_cpu[b])
                 valid_char_len = int(mask_cpu[b].sum())
-                
-                # REFINEMENT: Map each token's probability to exactly ONE canonical character position
-                # to match label semantics. We prioritize space, then punctuation, then token-end.
-                c2t = batch["char_to_token"][b].cpu().numpy()[:valid_char_len]
                 local_text = texts[b]
                 p_char_sparse = np.zeros(valid_char_len, dtype=np.float32)
 
+                c2t = batch["char_to_token"][b].cpu().numpy()[:valid_char_len]
                 if len(c2t) > 0:
-                    # Identify token boundaries efficiently
-                    token_ends = np.where(c2t[:-1] != c2t[1:])[0]
-                    token_ends = np.append(token_ends, len(c2t) - 1)
-                    
-                    # For each token, find the "best" character index in its span
-                    last_start = 0
-                    for end_idx in token_ends:
-                        token_id = c2t[end_idx]
-                        if token_id < 0:
-                            last_start = end_idx + 1
+                    # Find all unique tokens in the chunk
+                    unique_tokens = np.unique(c2t)
+                    for tok_idx in unique_tokens:
+                        # Skip special tokens (index 0 usually CLS)
+                        if tok_idx <= 0 or tok_idx >= preds_prob.shape[1]:
                             continue
                             
-                        # Default is token end
-                        best_idx = end_idx
-                        # Search for space or punctuation in span [last_start, end_idx]
-                        found_pref = False
-                        for idx in range(last_start, end_idx + 1):
-                            if idx < len(local_text):
-                                char = local_text[idx]
-                                if char.isspace():
-                                    best_idx = idx
-                                    found_pref = True
+                        prob = char_probs_cpu[b, np.where(c2t == tok_idx)[0][0]]
+                        if prob > threshold:
+                            # Token 'tok_idx' is predicted as 1. 
+                            # Find all chars mapped to this token.
+                            char_indices = np.where(c2t == tok_idx)[0]
+                            # Search for the best boundary index within these characters
+                            best_idx = char_indices[0] # Default to start of token
+                            for c_idx in char_indices:
+                                if local_text[c_idx].isspace():
+                                    best_idx = c_idx
                                     break
-                                elif not found_pref and char in PUNCT_CHARS:
-                                    best_idx = idx
-                                    # keep searching for a space
-                        
-                        p_char_sparse[best_idx] = char_probs_cpu[b, end_idx]
-                        last_start = end_idx + 1
+                            
+                            # Refine with canonical logic
+                            best_idx = int(canonicalize_boundary_index(local_text, best_idx, valid_char_len))
+                            p_char_sparse[best_idx] = 1.0
 
-                end_idx = min(offset + valid_char_len, total_text_len)
-                actual_len = end_idx - offset
+                end_idx_full = min(offset + valid_char_len, total_text_len)
+                actual_len = end_idx_full - offset
                 
                 if actual_len > 0:
-                    # Fast NumPy array updates
-                    full_probs_max[offset:end_idx] = np.maximum(
-                        full_probs_max[offset:end_idx], 
-                        p_char_sparse[:actual_len]
-                    )
+                    full_preds_sum[offset:end_idx_full] += p_char_sparse[:actual_len]
+                    full_preds_count[offset:end_idx_full] += 1
                     
-                    slice_filled = label_filled[offset:end_idx]
-                    unfilled_mask = ~slice_filled
-                    
-                    if np.any(unfilled_mask):
-                        l_arr = labels_cpu[b][:actual_len].astype(np.int16)
-                        full_labels[offset:end_idx][unfilled_mask] = l_arr[unfilled_mask]
-                        label_filled[offset:end_idx] = True
+                    unfilled = ~label_filled[offset:end_idx_full]
+                    if np.any(unfilled):
+                        full_labels[offset:end_idx_full][unfilled] = labels_cpu[b][:actual_len][unfilled]
+                        label_filled[offset:end_idx_full] = True
                 
                 num_processed += 1
             
-            # Delete local variables to free memory immediately
-            del input_ids, attention_mask, token_mask, char_to_token, char_probs
-            del char_probs_cpu, mask_cpu, labels_cpu, offsets_cpu
-            # Note: p_char_sparse is deleted automatically when the inner loop ends, 
-            # but we can't 'del' it here unless we define it outside the loop.
+            total_time += (end_inference - start_batch)
             
-            total_time += (time.time() - start_batch)
-                
             if (i + 1) % 10 == 0:
-                print(f" LLM: Batch {i+1}/{len(dataloader)} | Pure Inference Time: {time_inference:.2f}s | Total Batch Time: {total_time:.2f}s")
-                
-                # Periodically clear hardware cache to avoid Out of Memory (OOM)
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                elif hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
-                    torch.mps.empty_cache()
+                print(f" LLM: Batch {i+1}/{len(dataloader)} | Pure Inf Time so far: {total_time:.2f}s")
+                if torch.cuda.is_available(): torch.cuda.empty_cache()
+                elif hasattr(torch, "mps"): torch.mps.empty_cache()
+                gc.collect()
 
-    # Max pooling across overlapping windows preserves sparse boundary peaks.
     final_preds = []
     final_labels = []
     for j in range(total_text_len):
         if label_filled[j] and full_labels[j] >= 0:
-            max_p = full_probs_max[j]
-            final_preds.append(1 if max_p > threshold else 0)
-            final_labels.append(full_labels[j])
+            avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
+            # For fairness, we use a fixed 0.5 threshold for the agreement ratio.
+            final_preds.append(1 if avg_p >= 0.5 else 0)
+            final_labels.append(int(full_labels[j]))
 
-    precision, recall, f1, _ = precision_recall_fscore_support(
-        final_labels, final_preds, average="binary", zero_division=0
-    )
+    precision, recall, f1, _ = precision_recall_fscore_support(final_labels, final_preds, average="binary", zero_division=0)
     accuracy = accuracy_score(final_labels, final_preds)
     
     return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "total_time": total_time,
-        "num_processed": num_processed
+        "accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1,
+        "total_time": total_time, "num_processed": num_processed
     }
 
 
@@ -384,7 +372,6 @@ def evaluate_spacy(dataloader, nlp_model):
     for sample in dataloader.dataset:
         total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
         
-    # Use NumPy arrays for large text buffers
     full_preds_sum = np.zeros(total_text_len, dtype=np.float32)
     full_preds_count = np.zeros(total_text_len, dtype=np.int32)
     full_labels = np.zeros(total_text_len, dtype=np.int16)
@@ -407,9 +394,9 @@ def evaluate_spacy(dataloader, nlp_model):
             valid_len = int(mask[b].sum().item())
             l_list = labels[b][:valid_len].int().tolist()
             
-            # Run SpaCy
+            # 1. SpaCy Inference (Timed)
             doc = nlp_model(text)
-            p = [0] * valid_len
+            p = np.zeros(valid_len, dtype=np.float32)
             
             sents_list = list(doc.sents)
             num_sents = len(sents_list)
@@ -417,27 +404,24 @@ def evaluate_spacy(dataloader, nlp_model):
                 if sent_idx < num_sents - 1:
                     boundary_idx = sent.end_char
                     if boundary_idx < valid_len:
-                        if text[boundary_idx] == " ":
-                            p[boundary_idx] = 1
-                        elif boundary_idx > 0 and text[boundary_idx - 1] == " ":
-                            p[boundary_idx - 1] = 1
-                        else:
-                            p[boundary_idx] = 1 
+                        canon_idx = canonicalize_boundary_index(text, boundary_idx, valid_len)
+                        p[canon_idx] = 1.0
                             
-            # Accumulate char-level predictions directly on text positions.
-            for j in range(valid_len):
-                idx = offset + j
-                if idx < total_text_len:
-                    full_preds_sum[idx] += p[j]
-                    full_preds_count[idx] += 1
-                    if not label_filled[idx]:
-                        full_labels[idx] = l_list[j]
-                        label_filled[idx] = True
+            # 2. Accumulate
+            end_p = min(offset + valid_len, total_text_len)
+            actual_len = end_p - offset
+            if actual_len > 0:
+                full_preds_sum[offset:end_p] += p[:actual_len]
+                full_preds_count[offset:end_p] += 1
+                unfilled = ~label_filled[offset:end_p]
+                if np.any(unfilled):
+                    l_arr = np.array(l_list[:actual_len], dtype=np.int16)
+                    full_labels[offset:end_p][unfilled] = l_arr[unfilled]
+                    label_filled[offset:end_p] = True
             
             num_processed += 1
             
-        end_batch = time.time()
-        total_time += (end_batch - start_batch)
+        total_time += (time.time() - start_batch)
             
         if (i + 1) % 10 == 0:
             print(f" SpaCy: Batch {i+1}/{len(dataloader)} processed...")
@@ -448,20 +432,14 @@ def evaluate_spacy(dataloader, nlp_model):
         if label_filled[j] and full_labels[j] >= 0:
             avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
             final_preds.append(1 if avg_p >= 0.5 else 0)
-            final_labels.append(full_labels[j])
+            final_labels.append(int(full_labels[j]))
 
-    precision, recall, f1, _ = precision_recall_fscore_support(
-        final_labels, final_preds, average="binary", zero_division=0
-    )
+    precision, recall, f1, _ = precision_recall_fscore_support(final_labels, final_preds, average="binary", zero_division=0)
     accuracy = accuracy_score(final_labels, final_preds)
     
     return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "total_time": total_time,
-        "num_processed": num_processed
+        "accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1,
+        "total_time": total_time, "num_processed": num_processed
     }
 
 def evaluate_nltk(dataloader, language="italian"):
@@ -471,7 +449,6 @@ def evaluate_nltk(dataloader, language="italian"):
     for sample in dataloader.dataset:
         total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
         
-    # Use NumPy arrays for large text buffers
     full_preds_sum = np.zeros(total_text_len, dtype=np.float32)
     full_preds_count = np.zeros(total_text_len, dtype=np.int32)
     full_labels = np.zeros(total_text_len, dtype=np.int16)
@@ -499,20 +476,15 @@ def evaluate_nltk(dataloader, language="italian"):
             valid_len = int(mask[b].sum().item())
             l_list = labels[b][:valid_len].int().tolist()
             
-            # Run NLTK
-            p = [0] * valid_len
+            # 1. NLTK Inference (Timed)
+            p = np.zeros(valid_len, dtype=np.float32)
 
             if punkt_tokenizer is not None:
                 sent_spans = list(punkt_tokenizer.span_tokenize(text))
                 for _, sent_end in sent_spans[:-1]:
-                    boundary_idx = sent_end
-                    if boundary_idx < valid_len:
-                        if text[boundary_idx] == " ":
-                            p[boundary_idx] = 1
-                        elif boundary_idx > 0 and text[boundary_idx - 1] == " ":
-                            p[boundary_idx - 1] = 1
-                        else:
-                            p[boundary_idx] = 1
+                    if sent_end < valid_len:
+                        canon_idx = canonicalize_boundary_index(text, sent_end, valid_len)
+                        p[canon_idx] = 1.0
             else:
                 sentences = nltk.sent_tokenize(text, language=language)
                 current_pos = 0
@@ -522,28 +494,25 @@ def evaluate_nltk(dataloader, language="italian"):
                         if idx != -1:
                             boundary_idx = idx + len(sent_text)
                             if boundary_idx < valid_len:
-                                if text[boundary_idx] == " ":
-                                    p[boundary_idx] = 1
-                                elif boundary_idx > 0 and text[boundary_idx - 1] == " ":
-                                    p[boundary_idx - 1] = 1
-                                else:
-                                    p[boundary_idx] = 1
+                                canon_idx = canonicalize_boundary_index(text, boundary_idx, valid_len)
+                                p[canon_idx] = 1.0
                             current_pos = boundary_idx
 
-            # Accumulate char-level predictions directly on text positions.
-            for j in range(valid_len):
-                idx = offset + j
-                if idx < total_text_len:
-                    full_preds_sum[idx] += p[j]
-                    full_preds_count[idx] += 1
-                    if not label_filled[idx]:
-                        full_labels[idx] = l_list[j]
-                        label_filled[idx] = True
+            # 2. Accumulate
+            end_p = min(offset + valid_len, total_text_len)
+            actual_len = end_p - offset
+            if actual_len > 0:
+                full_preds_sum[offset:end_p] += p[:actual_len]
+                full_preds_count[offset:end_p] += 1
+                unfilled = ~label_filled[offset:end_p]
+                if np.any(unfilled):
+                    l_arr = np.array(l_list[:actual_len], dtype=np.int16)
+                    full_labels[offset:end_p][unfilled] = l_arr[unfilled]
+                    label_filled[offset:end_p] = True
             
             num_processed += 1
             
-        end_batch = time.time()
-        total_time += (end_batch - start_batch)
+        total_time += (time.time() - start_batch)
             
         if (i + 1) % 10 == 0:
             print(f" NLTK: Batch {i+1}/{len(dataloader)} processed...")
@@ -554,20 +523,14 @@ def evaluate_nltk(dataloader, language="italian"):
         if label_filled[j] and full_labels[j] >= 0:
             avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
             final_preds.append(1 if avg_p >= 0.5 else 0)
-            final_labels.append(full_labels[j])
+            final_labels.append(int(full_labels[j]))
 
-    precision, recall, f1, _ = precision_recall_fscore_support(
-        final_labels, final_preds, average="binary", zero_division=0
-    )
+    precision, recall, f1, _ = precision_recall_fscore_support(final_labels, final_preds, average="binary", zero_division=0)
     accuracy = accuracy_score(final_labels, final_preds)
     
     return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "total_time": total_time,
-        "num_processed": num_processed
+        "accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1,
+        "total_time": total_time, "num_processed": num_processed
     }
 
 def print_comparison(spacy_res, nltk_res, llm_res, llm_label="LLM"):
@@ -858,7 +821,7 @@ def main():
 def evaluate_cached_model_aligned(dataloader, cached_dataset, mlp, device, threshold=0.5):
     """
     Optimized evaluator for compare_spacy that uses PRE-COMPUTED embeddings.
-    Matches the exact character-level alignment logic of evaluate_model.
+    Standardized with Average Pooling of continuous probabilities and Canonical Alignment.
     """
     print(f"\n--- Running ALIGNED CACHED Inference on {len(dataloader.dataset)} chunks ---")
     
@@ -866,19 +829,19 @@ def evaluate_cached_model_aligned(dataloader, cached_dataset, mlp, device, thres
     for sample in dataloader.dataset:
         total_text_len = max(total_text_len, sample["char_offset"] + len(sample["spaceless"]))
     
-    full_probs_max = np.zeros(total_text_len, dtype=np.float32)
+    full_preds_sum = np.zeros(total_text_len, dtype=np.float32)
+    full_preds_count = np.zeros(total_text_len, dtype=np.int32)
     full_labels = np.zeros(total_text_len, dtype=np.int16)
     label_filled = np.zeros(total_text_len, dtype=bool)
     
     total_time = 0.0
     num_processed = 0
+    num_penalized = 0
     
     mlp.eval()
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
             batch_size = batch["input_ids"].shape[0]
-            
-            # Retrieve textual and label info from the dataloader batch
             char_mask_batch = batch["char_mask"].cpu().numpy()
             char_labels_batch = batch["char_labels"].cpu().numpy()
             offsets_batch = batch["char_offset"].cpu().numpy()
@@ -887,91 +850,96 @@ def evaluate_cached_model_aligned(dataloader, cached_dataset, mlp, device, thres
 
             for b_idx in range(batch_size):
                 global_idx = i * dataloader.batch_size + b_idx
-                if global_idx >= len(cached_dataset):
-                    break
+                if global_idx >= len(cached_dataset): break
                     
                 cached_sample = cached_dataset[global_idx]
                 dataloader_text = texts_batch[b_idx]
+                offset = int(offsets_batch[b_idx])
+                valid_char_len = int(char_mask_batch[b_idx].sum())
                 
                 # Check alignment preview
                 if cached_sample.get("spaceless", "")[:30] != dataloader_text[:30]:
-                    print(f"Warning: Alignment mismatch at chunk {global_idx}!")
-                    print(f"  DL: {dataloader_text[:30]}...")
-                    print(f"  CH: {cached_sample.get('spaceless', '')[:30]}...")
+                    print(f"CRITICAL: Alignment mismatch at chunk {global_idx}. Penalizing as 0 predictions.")
+                    # We still count the area but don't add to sum (0 prediction penalty)
+                    end_idx = min(offset + valid_char_len, total_text_len)
+                    if end_idx > offset:
+                        full_preds_count[offset:end_idx] += 1
+                        unfilled = ~label_filled[offset:end_idx]
+                        if np.any(unfilled):
+                            full_labels[offset:end_idx][unfilled] = char_labels_batch[b_idx][:end_idx-offset][unfilled]
+                            label_filled[offset:end_idx] = True
+                    num_penalized += 1
                     continue
 
-                # 1. Retrieve pre-computed embeddings
+                # 1. MLP Prediction (Timed)
                 tok_emb = cached_sample["token_embeddings"].to(device).float().unsqueeze(0)
-                # Note: mask is implicit since tokens in cache are usually already filtered
                 
-                # 2. MLP Prediction (Fast)
+                if torch.cuda.is_available(): torch.cuda.synchronize()
+                elif hasattr(torch, "mps"): torch.mps.synchronize()
                 start_t = time.time()
-                preds_out, _ = mlp(tok_emb)
-                preds = torch.sigmoid(preds_out).squeeze(0) # [seq_len_cached]
                 
-                # Hardware sync
+                preds_out, _ = mlp(tok_emb)
+                preds_prob = torch.sigmoid(preds_out).squeeze(0)
+                
                 if torch.cuda.is_available(): torch.cuda.synchronize()
                 elif hasattr(torch, "mps"): torch.mps.synchronize()
                 total_time += (time.time() - start_t)
                 
-                # 3. Project to characters
-                # Current sample's char_to_token
-                c2t_sample = char_to_token_batch[b_idx].unsqueeze(0) # [1, seq_len_batch]
-                
-                # Safety check: indices in c2t_sample must not exceed preds length
+                # 2. Project to characters
+                c2t_sample = char_to_token_batch[b_idx]
                 max_tok_idx = c2t_sample.max().item()
-                if max_tok_idx >= preds.shape[0]:
-                    # This happens if chunking parameters (max_chars) are different
-                    print(f"Warning: Chunk sequence length mismatch at sample {global_idx} (cached tokens: {preds.shape[0]}, required: {max_tok_idx}). Skip.")
+                if max_tok_idx >= preds_prob.shape[0]:
+                    print(f"Error: Cache sequence length mismatch at sample {global_idx}. Penalty.")
+                    num_penalized += 1
                     continue
 
-                char_probs_gpu = torch.gather(preds.unsqueeze(0), dim=1, index=c2t_sample)
-                char_probs_cpu = char_probs_gpu.cpu().numpy()[0] # [seq_len_batch]
+                char_probs_gpu = torch.gather(preds_prob.unsqueeze(0), dim=1, index=c2t_sample.unsqueeze(0))
+                char_probs_cpu = char_probs_gpu.cpu().numpy()[0]
                 
-                # 4. Refinement logic (Space/Punct peaks)
-                offset = int(offsets_batch[b_idx])
-                valid_char_len = int(char_mask_batch[b_idx].sum())
-                c2t_np = c2t_sample[0].cpu().numpy()[:valid_char_len]
+                # 3. Refinement logic and Accumulation
                 p_char_sparse = np.zeros(valid_char_len, dtype=np.float32)
-
+                c2t_np = c2t_sample.cpu().numpy()[:valid_char_len]
                 if len(c2t_np) > 0:
-                    token_ends = np.where(c2t_np[:-1] != c2t_np[1:])[0]
-                    token_ends = np.append(token_ends, len(c2t_np) - 1)
-                    last_start = 0
-                    for tend in token_ends:
-                        tid = c2t_np[tend]
-                        if tid < preds.shape[0]:
-                            prob = char_probs_cpu[tend]
-                            best_idx = tend
-                            found_pref = False
-                            for j in range(last_start, tend + 1):
-                                if j < len(dataloader_text):
-                                    char = dataloader_text[j]
-                                    if char.isspace():
-                                        best_idx = j
-                                        found_pref = True
-                                        break
-                                    elif not found_pref and char in PUNCT_CHARS:
-                                        best_idx = j
-                            p_char_sparse[best_idx] = prob
-                        last_start = tend + 1
+                    unique_tokens = np.unique(c2t_np)
+                    for tok_idx in unique_tokens:
+                        if tok_idx <= 0 or tok_idx >= preds_prob.shape[0]:
+                            continue
+                            
+                        # Use first occurrence to check prob
+                        first_idx = np.where(c2t_np == tok_idx)[0][0]
+                        prob = char_probs_cpu[first_idx]
+                        if prob > threshold:
+                            char_indices = np.where(c2t_np == tok_idx)[0]
+                            best_idx = char_indices[0]
+                            for c_idx in char_indices:
+                                if dataloader_text[c_idx].isspace():
+                                    best_idx = c_idx
+                                    break
+                            
+                            best_idx = int(canonicalize_boundary_index(dataloader_text, best_idx, valid_char_len))
+                            p_char_sparse[best_idx] = 1.0
 
-                end_p = min(offset + valid_char_len, total_text_len)
-                actual_len = end_p - offset
-                if actual_len > 0:
-                    full_probs_max[offset:end_p] = np.maximum(full_probs_max[offset:end_p], p_char_sparse[:actual_len])
-                    unfilled = ~label_filled[offset:end_p]
-                    if np.any(unfilled):
-                        full_labels[offset:end_p][unfilled] = char_labels_batch[b_idx][:actual_len][unfilled]
-                        label_filled[offset:end_p] = True
+                # Accumulate into global arrays
+                end_idx = min(offset + valid_char_len, total_text_len)
+                full_preds_sum[offset:end_idx] += p_char_sparse[:end_idx-offset]
+                full_preds_count[offset:end_idx] += 1
+                
+                unfilled = ~label_filled[offset:end_idx]
+                if np.any(unfilled):
+                    full_labels[offset:end_idx][unfilled] = char_labels_batch[b_idx][:end_idx-offset][unfilled]
+                    label_filled[offset:end_idx] = True
                 num_processed += 1
+
+    if num_penalized > 0:
+        print(f"WARNING: Penalized {num_penalized} chunks due to alignment issues (predicted 0 boundaries for them).")
 
     final_preds = []
     final_labels = []
     for j in range(total_text_len):
         if label_filled[j] and full_labels[j] >= 0:
-            max_p = full_probs_max[j]
-            final_preds.append(1 if max_p > threshold else 0)
+            avg_p = full_preds_sum[j] / max(1, full_preds_count[j])
+            # Unified agreement threshold
+            final_preds.append(1 if avg_p >= 0.5 else 0)
             final_labels.append(int(full_labels[j]))
 
     precision, recall, f1, _ = precision_recall_fscore_support(final_labels, final_preds, average="binary", zero_division=0)
