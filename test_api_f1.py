@@ -107,7 +107,7 @@ def print_comparison(results: dict, elapsed: dict, gt_count: int):
         ("Accuracy", lambda n: f"{results[n]['accuracy']:.4f}"),
         ("Precision", lambda n: f"{results[n]['precision']:.4f}"),
         ("Recall", lambda n: f"{results[n]['recall']:.4f}"),
-        ("F1 Score", lambda n: f"{results[n]['f1']:.4f}"),
+        ("F1 Score", lambda n: f"{results[n]['f1']:.6f}"),
         ("Time (s)", lambda n: f"{elapsed[n]:.2f}"),
     ]
 

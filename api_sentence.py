@@ -62,7 +62,16 @@ class SentenceSplitterAPI:
 
         total_len = len(text)
         full_preds_sum = np.zeros(total_len, dtype=np.float32)
-        full_preds_count = np.zeros(total_len, dtype=np.int32)
+        full_preds_count = np.zeros(total_len, dtype=np.float32)
+        
+        def get_window_weights(length):
+            """Trapezoidal window for soft voting."""
+            ramp = int(length * 0.1)
+            w = np.ones(length, dtype=np.float32)
+            if ramp > 0:
+                w[:ramp] = np.linspace(0.1, 1.0, ramp)
+                w[-ramp:] = np.linspace(1.0, 0.1, ramp)
+            return w
         
         # 1. Prepare overlapping chunks, snapping end to natural boundaries.
         # After the nominal end (max_chars), look ahead up to 100 chars for:
@@ -116,15 +125,20 @@ class SentenceSplitterAPI:
             for b_idx, (start_idx, end_idx, chunk_text) in enumerate(batch_chunks):
                 _, char_to_token = build_sentence_char_to_token_map(chunk_text, self.tokenizer)
                 c2t_np = np.array(char_to_token)
-                p_chunk_sparse = np.zeros(len(chunk_text), dtype=np.float32)
-                unique_tokens = np.unique(c2t_np)
+                chunk_len = len(chunk_text)
+                p_chunk_sparse = np.zeros(chunk_len, dtype=np.float32)
                 chunk_preds = preds_prob[b_idx]
                 
-                for tok_idx in unique_tokens:
-                    if tok_idx <= 0 or tok_idx >= len(chunk_preds): continue
-                    
-                    if chunk_preds[tok_idx] > self.threshold:
+                # 3. Vectorized Token-Character Mapping
+                active_tokens = np.where(chunk_preds > self.threshold)[0]
+                active_tokens = active_tokens[active_tokens > 0] # remove special tokens
+                
+                if len(active_tokens) > 0:
+                    for tok_idx in active_tokens:
+                        if tok_idx >= len(chunk_preds): continue
                         char_indices = np.where(c2t_np == tok_idx)[0]
+                        if len(char_indices) == 0: continue
+                        
                         best_idx = char_indices[0]
                         for c_idx in char_indices:
                             if chunk_text[c_idx].isspace():
@@ -134,8 +148,19 @@ class SentenceSplitterAPI:
                         best_idx = int(canonicalize_boundary_index(chunk_text, best_idx, len(chunk_text)))
                         p_chunk_sparse[best_idx] = 1.0
 
-                full_preds_sum[start_idx:end_idx] += p_chunk_sparse
-                full_preds_count[start_idx:end_idx] += 1
+                # 1. & 2. Weighted Aggregation with Margin Discard
+                weights = get_window_weights(chunk_len)
+                margin = int(self.max_chars * 0.05)
+                
+                valid_start = 0 if start_idx == 0 else margin
+                valid_end = chunk_len if end_idx == total_len else chunk_len - margin
+                
+                if valid_start < valid_end:
+                    global_start = start_idx + valid_start
+                    global_end = start_idx + valid_end
+                    
+                    full_preds_sum[global_start:global_end] += (p_chunk_sparse[valid_start:valid_end] * weights[valid_start:valid_end])
+                    full_preds_count[global_start:global_end] += weights[valid_start:valid_end]
 
         # 3. Final Consensus (Binary Agreement)
         boundaries = []
