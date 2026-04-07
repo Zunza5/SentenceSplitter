@@ -99,7 +99,7 @@ class SentenceSplitterGUI:
             self.root.after(0, lambda: self.status_var.set("Engine Failure"))
 
     def on_ready(self):
-        self.status_var.set(f"Engine Ready • {self.api.device.upper()} • Stride: {self.api.stride_chars}")
+        self.status_var.set(f"Engine Ready • {str(self.api.device).upper()} • Stride: {self.api.stride_chars}")
         self.split_btn.config(state=tk.NORMAL)
 
     def on_split_click(self):
