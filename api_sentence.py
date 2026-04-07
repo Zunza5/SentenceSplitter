@@ -64,13 +64,36 @@ class SentenceSplitterAPI:
         full_preds_sum = np.zeros(total_len, dtype=np.float32)
         full_preds_count = np.zeros(total_len, dtype=np.int32)
         
-        # 1. Prepare overlapping chunks
+        # 1. Prepare overlapping chunks, snapping end to natural boundaries.
+        # After the nominal end (max_chars), look ahead up to 100 chars for:
+        #   - a strong punctuation (.!?) followed by a space  → best cut point
+        #   - a plain space                                   → fallback cut
+        # This prevents chunks from starting mid-word, keeping context
+        # closer to the training distribution and reducing false positives.
+        STRONG_PUNCT = frozenset(".!?")
+        SNAP_LOOKAHEAD = 100
+
+        def snap_end(pos: int) -> int:
+            """Advance pos to the next natural text boundary within lookahead."""
+            if pos >= total_len:
+                return total_len
+            limit = min(pos + SNAP_LOOKAHEAD, total_len)
+            first_space = None
+            for i in range(pos, limit):
+                ch = text[i]
+                if ch in STRONG_PUNCT and i + 1 < total_len and text[i + 1].isspace():
+                    return i + 2  # include space after punct
+                if ch.isspace() and first_space is None:
+                    first_space = i + 1  # cut after the space
+            return first_space if first_space is not None else pos
+
         chunks = []
         start = 0
         while start < total_len:
-            end = min(start + self.max_chars, total_len)
+            raw_end = min(start + self.max_chars, total_len)
+            end = snap_end(raw_end) if raw_end < total_len else total_len
             chunks.append((start, end, text[start:end]))
-            if end == total_len: break
+            if end >= total_len: break
             start += self.stride_chars
 
         # 2. Process chunks in batches
